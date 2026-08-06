@@ -1,0 +1,40 @@
+# Dependencies
+node_modules/
+.bun/
+
+# Build
+dist/
+.vercel/
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Coverage
+coverage/
+
+# Prisma
+prisma/*.db
+prisma/*.db-journal
+
+# Test
+.vitest/
+
+# Misc
+*.tsbuildinfo
+.turbo/

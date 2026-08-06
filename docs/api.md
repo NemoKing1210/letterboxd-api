@@ -1,0 +1,97 @@
+# API
+
+Interactive docs: `GET /docs` (Swagger UI). Spec: `GET /openapi.json`.
+
+## Endpoints
+
+### Health
+
+`GET /health`
+
+```json
+{ "status": "ok", "service": "letterboxd-intelligence-api", "timestamp": "..." }
+```
+
+### User profile
+
+`GET /api/users/:username`
+
+If the user is missing locally, the API triggers a Letterboxd sync (lazy).
+
+```json
+{
+  "username": "example",
+  "moviesCount": 500,
+  "averageRating": 4.2,
+  "favoriteGenres": [{ "name": "sci-fi", "count": 42 }],
+  "lastSyncedAt": "2026-08-06T12:00:00.000Z"
+}
+```
+
+### Movies
+
+`GET /api/users/:username/movies`
+
+Query params:
+
+| Param | Description |
+| --- | --- |
+| `ratingMin` / `ratingMax` | 0–5 |
+| `year` | Exact year |
+| `yearFrom` / `yearTo` | Range |
+| `genre` | Exact genre token (enriched in v2) |
+| `director` | Case-insensitive contains |
+| `sort` | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
+| `page` / `limit` | Pagination (`limit` max 100) |
+
+### Ratings
+
+`GET /api/users/:username/ratings`
+
+Returns average, count, best/worst films, rating distribution.
+
+### Favorites
+
+`GET /api/users/:username/favorites`
+
+Favorite movies (liked or ≥ 4.5), directors, genres, years.
+
+### Statistics
+
+`GET /api/users/:username/statistics`
+
+```json
+{
+  "moviesWatched": 500,
+  "averageRating": 4.4,
+  "topGenres": [],
+  "topDirectors": [],
+  "topDecades": []
+}
+```
+
+### Sync
+
+`POST /api/users/:username/sync`
+
+Forces a scrape + upsert cycle and returns sync metadata.
+
+### Recommendations
+
+`GET /api/users/:username/recommendations?limit=5`
+
+Rule-based stub implementing `RecommendationEngine` for future AI swap.
+
+## Errors
+
+```json
+{
+  "error": {
+    "code": "NOT_FOUND",
+    "message": "User \"x\" not found",
+    "requestId": "..."
+  }
+}
+```
+
+Common codes: `NOT_FOUND`, `VALIDATION_ERROR`, `RATE_LIMIT_EXCEEDED`, `EXTERNAL_SERVICE_ERROR`, `SYNC_FAILED`, `INTERNAL_ERROR`.
