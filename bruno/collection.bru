@@ -29,7 +29,17 @@ docs {
   1. Start the API (`bun run dev`)
   2. Select the **Local** environment
   3. Set `username` to a Letterboxd username
-  4. Run **Sync User** once before reading derived endpoints (or hit Get Profile to lazy-sync)
+  4. Run **Users → Sync → Sync User** once before reading derived endpoints
+     (or **Users → Get User Profile** for lazy sync)
+  
+  ## Folder layout
+  
+  Mirrors API path nesting:
+  
+  - **Health & public helpers** — `/health`, `/privacy`, GPT Actions schema
+  - **Users** — profile at folder root
+    - **Sync** / **Movies** / **Ratings** / **Search** / **Statistics** / **Recommendations**
+    - **Favorites** — list + **Directors** / **Genres** / **Years** facets
   
   ## Auth (optional)
   
@@ -39,7 +49,7 @@ docs {
   ## Favorites
   
   - **List Favorites** — paginated liked movies (same filters as List Movies)
-  - **List Favorite Directors / Genres / Years** — paginated `{ name, count }` facets
+  - **Directors / Genres / Years** — paginated `{ name, count }` facets
   
   List endpoints default `limit` to 20 (max 100).
 
