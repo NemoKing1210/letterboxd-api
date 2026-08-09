@@ -26,9 +26,26 @@ All user-scoped `GET` endpoints below auto-sync from Letterboxd when the usernam
   "moviesCount": 500,
   "averageRating": 4.2,
   "favoriteGenres": [{ "name": "sci-fi", "count": 42 }],
-  "lastSyncedAt": "2026-08-06T12:00:00.000Z"
+  "lastSyncedAt": "2026-08-06T12:00:00.000Z",
+  "followingCount": 1,
+  "followersCount": 2,
+  "externalLinks": [
+    { "label": "linktr.ee", "url": "https://linktr.ee/example" }
+  ],
+  "favoriteFilms": [
+    {
+      "slug": "inception",
+      "title": "Inception",
+      "year": 2010,
+      "poster": "https://...",
+      "url": "https://letterboxd.com/film/inception/"
+    }
+  ],
+  "recentLikes": []
 }
 ```
+
+Pinned `favoriteFilms` and `recentLikes` come from the Letterboxd profile page (synced snapshot). They are separate from `GET /favorites` (liked films / high ratings).
 
 ### Movie object
 

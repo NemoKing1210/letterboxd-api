@@ -35,6 +35,34 @@ describe('Letterboxd parsers', () => {
     expect(profile.displayName).toBe('Demo User');
     expect(profile.filmsCount).toBe(3);
     expect(profile.bio).toBe('Film enthusiast');
+    expect(profile.followingCount).toBe(1);
+    expect(profile.followersCount).toBe(2);
+    expect(profile.externalLinks).toEqual([
+      { label: 'linktr.ee', url: 'https://linktr.ee/demouser' },
+      { label: 'DemoUser', url: 'https://twitter.com/DemoUser' },
+    ]);
+    expect(profile.favoriteFilms).toEqual([
+      {
+        slug: 'inception',
+        title: 'Inception',
+        year: 2010,
+        poster: 'https://example.com/inception.jpg',
+      },
+      {
+        slug: 'the-dark-knight',
+        title: 'The Dark Knight',
+        year: 2008,
+        poster: 'https://example.com/tdk.jpg',
+      },
+    ]);
+    expect(profile.recentLikes).toEqual([
+      {
+        slug: 'the-mist',
+        title: 'The Mist',
+        year: 2007,
+        poster: 'https://example.com/mist.jpg',
+      },
+    ]);
   });
 
   it('parses films page HTML with year-from-title and placeholder posters', () => {

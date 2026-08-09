@@ -8,6 +8,11 @@ function user(username: string): User {
   return {
     id: 'u1',
     username,
+    followingCount: null,
+    followersCount: null,
+    externalLinks: [],
+    favoriteFilms: [],
+    recentLikes: [],
     createdAt: new Date(),
     updatedAt: new Date(),
   };

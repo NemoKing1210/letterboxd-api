@@ -111,7 +111,7 @@ bun run dev
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/users/:username` | Profile |
+| `GET` | `/api/users/:username` | Profile (aggregates + Letterboxd network/links/pinned films) |
 | `GET` | `/api/users/:username/movies` | Filtered movie list |
 | `GET` | `/api/users/:username/ratings` | Ratings summary |
 | `GET` | `/api/users/:username/favorites` | Favorite movies (filtered, paginated) |

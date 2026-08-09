@@ -67,6 +67,11 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
         averageRating: 4.2,
         favoriteGenres: [{ name: 'sci-fi', count: 2 }],
         lastSyncedAt: null,
+        followingCount: 1,
+        followersCount: 2,
+        externalLinks: [],
+        favoriteFilms: [],
+        recentLikes: [],
       })),
     } as unknown as AppContainer['usersService'],
     moviesService: {

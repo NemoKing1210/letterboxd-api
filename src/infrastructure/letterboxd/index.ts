@@ -3,6 +3,8 @@ export type {
   LetterboxdFilm,
   LetterboxdFilmDetails,
   LetterboxdProfile,
+  LetterboxdProfileFilm,
+  LetterboxdExternalLink,
   LetterboxdRating,
   LetterboxdDiaryEntry,
 } from './movie-provider';

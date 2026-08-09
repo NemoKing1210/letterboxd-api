@@ -15,12 +15,20 @@ enum SyncStatus {
 }
 
 model User {
-  id        String        @id @default(cuid())
-  username  String        @unique
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
-  movies    UserMovie[]
-  syncs     SyncHistory[]
+  id              String        @id @default(cuid())
+  username        String        @unique
+  followingCount  Int?
+  followersCount  Int?
+  /// Snapshot from Letterboxd profile: [{ label, url }]
+  externalLinks   Json          @default("[]")
+  /// Pinned favorite films on profile: [{ slug, title, year, poster }]
+  favoriteFilms   Json          @default("[]")
+  /// Recent likes on profile: [{ slug, title, year, poster }]
+  recentLikes     Json          @default("[]")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  movies          UserMovie[]
+  syncs           SyncHistory[]
 }
 
 model Movie {

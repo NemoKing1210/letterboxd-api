@@ -4,6 +4,7 @@ import type { LetterboxdFilm, LetterboxdProfile, MovieProvider } from '../../../
 import type { CacheProvider } from '../../../infrastructure/cache';
 import type { AppLogger } from '../../../infrastructure/logger';
 import type { Movie, SyncHistory, User, UserMovie } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 
 function createLogger(): AppLogger {
   return {
@@ -15,6 +16,34 @@ function createLogger(): AppLogger {
     trace: vi.fn(),
     child: vi.fn(),
   } as unknown as AppLogger;
+}
+
+function emptyProfileExtras(): Pick<
+  LetterboxdProfile,
+  'followingCount' | 'followersCount' | 'externalLinks' | 'favoriteFilms' | 'recentLikes'
+> {
+  return {
+    followingCount: null,
+    followersCount: null,
+    externalLinks: [],
+    favoriteFilms: [],
+    recentLikes: [],
+  };
+}
+
+function createUser(overrides: Partial<User> = {}): User {
+  return {
+    id: 'u1',
+    username: 'demo',
+    followingCount: null,
+    followersCount: null,
+    externalLinks: [] as Prisma.JsonValue,
+    favoriteFilms: [] as Prisma.JsonValue,
+    recentLikes: [] as Prisma.JsonValue,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    ...overrides,
+  };
 }
 
 describe('SynchronizationService', () => {
@@ -36,13 +65,22 @@ describe('SynchronizationService', () => {
     let moviesSawDiaryStarted = false;
     let diarySawMoviesStarted = false;
 
+    const profile: LetterboxdProfile = {
+      username: 'demo',
+      displayName: 'Demo',
+      filmsCount: 1,
+      bio: null,
+      followingCount: 1,
+      followersCount: 2,
+      externalLinks: [{ label: 'linktr.ee', url: 'https://linktr.ee/demo' }],
+      favoriteFilms: [
+        { slug: 'inception', title: 'Inception', year: 2010, poster: null },
+      ],
+      recentLikes: [],
+    };
+
     const provider: MovieProvider = {
-      getProfile: async (): Promise<LetterboxdProfile> => ({
-        username: 'demo',
-        displayName: 'Demo',
-        filmsCount: 1,
-        bio: null,
-      }),
+      getProfile: async (): Promise<LetterboxdProfile> => profile,
       getMovies: async () => {
         moviesStarted = true;
         moviesSawDiaryStarted = diaryStarted;
@@ -66,12 +104,7 @@ describe('SynchronizationService', () => {
       getFilmDetails,
     };
 
-    const user: User = {
-      id: 'u1',
-      username: 'demo',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const user = createUser();
 
     const movie: Movie = {
       id: 'm1',
@@ -96,6 +129,7 @@ describe('SynchronizationService', () => {
     };
 
     const upsertBySlug = vi.fn(async () => movie);
+    const upsertByUsername = vi.fn(async () => user);
     const upsertUserMovie = vi.fn(async (): Promise<UserMovie> => ({
       id: 'um1',
       userId: user.id,
@@ -110,7 +144,7 @@ describe('SynchronizationService', () => {
       users: {
         findByUsername: vi.fn(),
         findByUsernameWithMovies: vi.fn(),
-        upsertByUsername: vi.fn(async () => user),
+        upsertByUsername,
       },
       movies: {
         findBySlugs: vi.fn(),
@@ -148,6 +182,15 @@ describe('SynchronizationService', () => {
     expect(result.moviesSynced).toBe(1);
     expect(getFilmDetails).not.toHaveBeenCalled();
     expect(moviesSawDiaryStarted || diarySawMoviesStarted).toBe(true);
+    expect(upsertByUsername).toHaveBeenCalledWith('demo', {
+      followingCount: 1,
+      followersCount: 2,
+      externalLinks: [{ label: 'linktr.ee', url: 'https://linktr.ee/demo' }],
+      favoriteFilms: [
+        { slug: 'inception', title: 'Inception', year: 2010, poster: null },
+      ],
+      recentLikes: [],
+    });
     expect(upsertBySlug).toHaveBeenCalledWith({
       slug: 'inception',
       title: 'Inception',
@@ -179,12 +222,7 @@ describe('SynchronizationService', () => {
       getFilmDetails: vi.fn(),
     };
 
-    const user: User = {
-      id: 'u1',
-      username: 'demo',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const user = createUser();
 
     const syncRecord: SyncHistory = {
       id: 's1',
@@ -242,6 +280,7 @@ describe('SynchronizationService', () => {
       displayName: 'Demo',
       filmsCount: 0,
       bio: null,
+      ...emptyProfileExtras(),
     });
 
     const [a, b] = await Promise.all([first, second]);

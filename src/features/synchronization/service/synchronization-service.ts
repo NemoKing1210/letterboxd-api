@@ -52,13 +52,19 @@ export class SynchronizationService {
     this.deps.logger.info({ username: normalized, syncId: sync.id }, 'Synchronization started');
 
     try {
-      await this.deps.movieProvider.getProfile(normalized);
+      const profile = await this.deps.movieProvider.getProfile(normalized);
       const [films, watchedBySlug] = await Promise.all([
         this.deps.movieProvider.getMovies(normalized),
         this.loadWatchedDates(normalized),
       ]);
 
-      const user = await this.deps.users.upsertByUsername(normalized);
+      const user = await this.deps.users.upsertByUsername(normalized, {
+        followingCount: profile.followingCount,
+        followersCount: profile.followersCount,
+        externalLinks: profile.externalLinks,
+        favoriteFilms: profile.favoriteFilms,
+        recentLikes: profile.recentLikes,
+      });
       let moviesSynced = 0;
 
       for (const raw of films) {

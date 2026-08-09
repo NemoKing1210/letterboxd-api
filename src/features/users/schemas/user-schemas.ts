@@ -26,12 +26,45 @@ export const movieQuerySchema = z.object({
 
 export type MovieQuery = z.infer<typeof movieQuerySchema>;
 
+export const profileFilmSchema = z.object({
+  slug: z.string(),
+  title: z.string(),
+  year: z.number().nullable(),
+  poster: z.string().nullable(),
+  url: z.string().url(),
+});
+
+export const externalLinkSchema = z.object({
+  label: z.string(),
+  url: z.string().url(),
+});
+
 export const userProfileSchema = z.object({
   username: z.string(),
   moviesCount: z.number().int(),
   averageRating: z.number().nullable(),
   favoriteGenres: z.array(z.object({ name: z.string(), count: z.number() })),
   lastSyncedAt: z.string().datetime().nullable().optional(),
+  followingCount: z.number().int().nullable(),
+  followersCount: z.number().int().nullable(),
+  externalLinks: z.array(externalLinkSchema),
+  favoriteFilms: z.array(profileFilmSchema),
+  recentLikes: z.array(profileFilmSchema),
 });
 
 export type UserProfile = z.infer<typeof userProfileSchema>;
+export type ProfileFilm = z.infer<typeof profileFilmSchema>;
+export type ExternalLink = z.infer<typeof externalLinkSchema>;
+
+/** Shape stored on User.favoriteFilms / recentLikes JSON columns. */
+export const storedProfileFilmSchema = z.object({
+  slug: z.string(),
+  title: z.string(),
+  year: z.number().nullable(),
+  poster: z.string().nullable(),
+});
+
+export const storedExternalLinkSchema = z.object({
+  label: z.string(),
+  url: z.string().url(),
+});

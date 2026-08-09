@@ -7,6 +7,7 @@ export {
   PrismaSyncHistoryRepository,
 } from './repositories';
 export type {
+  UserProfileSnapshot,
   UserRepository,
   MovieRepository,
   UserMovieRepository,

@@ -5,9 +5,73 @@
   </head>
   <body>
     <div class="profile-name"><h1>Demo User</h1></div>
-    <section class="statistics">
-      <a class="statistic" href="/demouser/films/"><span class="value">3</span> Films</a>
-    </section>
+    <div class="profile-stats js-profile-stats">
+      <h4 class="profile-statistic statistic">
+        <a href="/demouser/films/"><span class="value">3</span><span class="definition">Films</span></a>
+      </h4>
+      <h4 class="profile-statistic statistic">
+        <a href="/demouser/following/"><span class="value">1</span><span class="definition">Following</span></a>
+      </h4>
+      <h4 class="profile-statistic statistic">
+        <a href="/demouser/followers/"><span class="value">2</span><span class="definition">Followers</span></a>
+      </h4>
+    </div>
+    <div class="profile-metadata js-profile-metadata">
+      <a class="metadatum -has-label" href="https://linktr.ee/demouser" rel="me nofollow noopener noreferrer" target="_blank">
+        <span class="label">linktr.ee</span>
+      </a>
+      <a class="metadatum -has-label" href="https://twitter.com/DemoUser" target="_blank" rel="nofollow noopener noreferrer">
+        <span class="label">DemoUser</span>
+      </a>
+    </div>
     <div class="profile-bio"><div class="body-text">Film enthusiast</div></div>
+
+    <section id="favourites" class="section">
+      <h2 class="section-heading">Favorite films</h2>
+      <ul class="grid -p150">
+        <li class="griditem">
+          <div
+            class="react-component"
+            data-item-name="Inception (2010)"
+            data-item-slug="inception"
+            data-item-link="/film/inception/"
+          >
+            <div class="poster film-poster">
+              <img src="https://example.com/inception.jpg" alt="Poster for Inception (2010)" />
+            </div>
+          </div>
+        </li>
+        <li class="griditem">
+          <div
+            class="react-component"
+            data-item-name="The Dark Knight (2008)"
+            data-item-slug="the-dark-knight"
+            data-item-link="/film/the-dark-knight/"
+          >
+            <div class="poster film-poster">
+              <img src="https://example.com/tdk.jpg" alt="Poster for The Dark Knight (2008)" />
+            </div>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section id="recently-liked" class="section">
+      <h2 class="section-heading">Recent likes</h2>
+      <ul class="grid -p150">
+        <li class="griditem">
+          <div
+            class="react-component"
+            data-item-name="The Mist (2007)"
+            data-item-slug="the-mist"
+            data-item-link="/film/the-mist/"
+          >
+            <div class="poster film-poster">
+              <img src="https://example.com/mist.jpg" alt="Poster for The Mist (2007)" />
+            </div>
+          </div>
+        </li>
+      </ul>
+    </section>
   </body>
 </html>

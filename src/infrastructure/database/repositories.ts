@@ -21,10 +21,18 @@ export type MovieListFilters = {
   limit: number;
 };
 
+export type UserProfileSnapshot = {
+  followingCount: number | null;
+  followersCount: number | null;
+  externalLinks: Array<{ label: string; url: string }>;
+  favoriteFilms: Array<{ slug: string; title: string; year: number | null; poster: string | null }>;
+  recentLikes: Array<{ slug: string; title: string; year: number | null; poster: string | null }>;
+};
+
 export interface UserRepository {
   findByUsername(username: string): Promise<User | null>;
   findByUsernameWithMovies(username: string): Promise<UserWithMovies | null>;
-  upsertByUsername(username: string): Promise<User>;
+  upsertByUsername(username: string, profile?: UserProfileSnapshot): Promise<User>;
 }
 
 export interface MovieRepository {
@@ -76,12 +84,22 @@ export class PrismaUserRepository implements UserRepository {
     });
   }
 
-  upsertByUsername(username: string): Promise<User> {
+  upsertByUsername(username: string, profile?: UserProfileSnapshot): Promise<User> {
     const normalized = username.toLowerCase();
+    const profileData = profile
+      ? {
+          followingCount: profile.followingCount,
+          followersCount: profile.followersCount,
+          externalLinks: profile.externalLinks,
+          favoriteFilms: profile.favoriteFilms,
+          recentLikes: profile.recentLikes,
+        }
+      : {};
+
     return this.prisma.user.upsert({
       where: { username: normalized },
-      create: { username: normalized },
-      update: {},
+      create: { username: normalized, ...profileData },
+      update: profileData,
     });
   }
 }

@@ -57,14 +57,73 @@ export function extractSlug(href: string | undefined | null): string | null {
   return match?.[1] ?? null;
 }
 
+function parseProfileStatCount($: CheerioAPI, hrefSuffix: string): number | null {
+  const valueText =
+    $(`.profile-stats a[href$="${hrefSuffix}"] .value`).first().text().trim() ||
+    $(`a[href$="${hrefSuffix}"] .value`).first().text().trim() ||
+    '';
+  const match = valueText.replace(/,/g, '').match(/(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function parseProfilePosterSection($: CheerioAPI, sectionSelector: string): LetterboxdProfile['favoriteFilms'] {
+  const films: LetterboxdProfile['favoriteFilms'] = [];
+  const seen = new Set<string>();
+  const root = $(sectionSelector);
+
+  root
+    .find(
+      'li.griditem .react-component[data-item-slug], li.griditem .film-poster, .react-component[data-item-slug]',
+    )
+    .each((_, el) => {
+      const poster = $(el);
+      const slug =
+        poster.attr('data-item-slug') ||
+        poster.attr('data-film-slug') ||
+        extractSlug(poster.attr('data-item-link')) ||
+        extractSlug(poster.attr('data-target-link')) ||
+        extractSlug(poster.find('a').attr('href'));
+
+      if (!slug || seen.has(slug)) return;
+      seen.add(slug);
+
+      const rawTitle =
+        poster.attr('data-item-name') ||
+        poster.attr('data-item-full-display-name') ||
+        poster.attr('data-film-name') ||
+        poster.find('img').attr('alt') ||
+        slug.replace(/-/g, ' ');
+
+      const yearRaw = poster.attr('data-film-release-year') || poster.attr('data-item-release-year');
+      const yearFromAttr = yearRaw ? Number(yearRaw) : null;
+      const { title, year: yearFromTitle } = extractYearFromTitle(rawTitle.trim());
+      const year =
+        yearFromAttr !== null && isValidFilmYear(yearFromAttr) ? yearFromAttr : yearFromTitle;
+
+      const posterSrc = poster.find('img').attr('src') || poster.attr('src') || null;
+      const posterUrl = posterSrc && !isPlaceholderPoster(posterSrc) ? posterSrc : null;
+
+      films.push({
+        slug,
+        title,
+        year,
+        poster: posterUrl,
+      });
+    });
+
+  return films;
+}
+
 export function parseProfileHtml(html: string, username: string): LetterboxdProfile {
   const $ = cheerio.load(html);
   const displayName =
     $('meta[property="og:title"]').attr('content')?.replace(/\s*•.*$/, '').trim() ||
+    $('.person-display-name .label').first().text().trim() ||
     $('.profile-name h1').text().trim() ||
     null;
 
   const filmsText =
+    $('.profile-stats a[href$="/films/"] .value').first().text() ||
     $('a[href*="/films/"]').filter((_, el) => $(el).text().toLowerCase().includes('film')).first().text() ||
     $('.statistic a[href$="/films/"]').text() ||
     '';
@@ -74,11 +133,30 @@ export function parseProfileHtml(html: string, username: string): LetterboxdProf
 
   const bio = $('.profile-bio .body-text').text().trim() || null;
 
+  const followingCount = parseProfileStatCount($, '/following/');
+  const followersCount = parseProfileStatCount($, '/followers/');
+
+  const externalLinks: LetterboxdProfile['externalLinks'] = [];
+  const seenLinks = new Set<string>();
+  $('.profile-metadata a.metadatum, a.metadatum.-has-label').each((_, el) => {
+    const node = $(el);
+    const url = node.attr('href')?.trim();
+    if (!url || seenLinks.has(url)) return;
+    seenLinks.add(url);
+    const label = node.find('.label').text().trim() || url;
+    externalLinks.push({ label, url });
+  });
+
   return {
     username,
     displayName,
     filmsCount,
     bio,
+    followingCount,
+    followersCount,
+    externalLinks,
+    favoriteFilms: parseProfilePosterSection($, '#favourites'),
+    recentLikes: parseProfilePosterSection($, '#recently-liked'),
   };
 }
 

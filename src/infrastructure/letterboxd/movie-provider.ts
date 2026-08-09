@@ -1,8 +1,25 @@
+export type LetterboxdProfileFilm = {
+  slug: string;
+  title: string;
+  year: number | null;
+  poster: string | null;
+};
+
+export type LetterboxdExternalLink = {
+  label: string;
+  url: string;
+};
+
 export type LetterboxdProfile = {
   username: string;
   displayName: string | null;
   filmsCount: number | null;
   bio: string | null;
+  followingCount: number | null;
+  followersCount: number | null;
+  externalLinks: LetterboxdExternalLink[];
+  favoriteFilms: LetterboxdProfileFilm[];
+  recentLikes: LetterboxdProfileFilm[];
 };
 
 export type LetterboxdFilm = {

@@ -6,9 +6,15 @@ import type {
 } from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
 import type { AppLogger } from '../../../infrastructure/logger';
-import { CACHE_KEYS } from '../../../shared/constants';
-import { average, countBy, normalizeUsername, topN } from '../../../shared/utils';
-import type { UserProfile } from '../schemas/user-schemas';
+import { CACHE_KEYS, LETTERBOXD_BASE_URL } from '../../../shared/constants';
+import { average, countBy, filmPageUrl, normalizeUsername, topN } from '../../../shared/utils';
+import {
+  storedExternalLinkSchema,
+  storedProfileFilmSchema,
+  type ExternalLink,
+  type ProfileFilm,
+  type UserProfile,
+} from '../schemas/user-schemas';
 import { ensureLocalUser, type UserSyncTrigger } from './ensure-local-user';
 
 export type UsersServiceDeps = {
@@ -59,9 +65,28 @@ export class UsersService {
       averageRating: average(ratings),
       favoriteGenres,
       lastSyncedAt: latestSync?.finishedAt?.toISOString() ?? latestSync?.startedAt.toISOString() ?? null,
+      followingCount: user.followingCount,
+      followersCount: user.followersCount,
+      externalLinks: parseStoredExternalLinks(user.externalLinks),
+      favoriteFilms: parseStoredProfileFilms(user.favoriteFilms),
+      recentLikes: parseStoredProfileFilms(user.recentLikes),
     };
 
     await this.deps.cache.set(cacheKey, profile, this.deps.env.CACHE_TTL);
     return profile;
   }
+}
+
+function parseStoredProfileFilms(value: unknown): ProfileFilm[] {
+  const parsed = storedProfileFilmSchema.array().safeParse(value);
+  if (!parsed.success) return [];
+  return parsed.data.map((film) => ({
+    ...film,
+    url: filmPageUrl(film.slug, LETTERBOXD_BASE_URL),
+  }));
+}
+
+function parseStoredExternalLinks(value: unknown): ExternalLink[] {
+  const parsed = storedExternalLinkSchema.array().safeParse(value);
+  return parsed.success ? parsed.data : [];
 }
