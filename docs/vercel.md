@@ -92,7 +92,7 @@ bun run db:migrate:deploy
 2. **Import** this Git repository.
 3. Framework preset: Other / no framework — `vercel.json` defines rewrites and the build.
 4. Root directory: repository root (where `vercel.json` lives).
-5. Build command is already `bun run db:generate` via `vercel.json` (Prisma client). Override only if you know you need to.
+5. Build command is already `bunx prisma generate` via `vercel.json` (Prisma client; Bun-only builders have no `node` for the Prisma shebang). Override only if you know you need to.
 6. Click **Deploy** only after you add env vars (next section). If you already deployed once without env, add vars and **Redeploy**.
 
 Optional: install the [Supabase integration](https://vercel.com/integrations/supabase) so `DATABASE_URL` is injected for you — still prefer the **transaction pooler** (`:6543` + `pgbouncer=true`) for the app runtime.
@@ -237,7 +237,8 @@ Use:
 | Deploy fails on `maxDuration`          | Hobby plan — set `maxDuration` to `10` in `vercel.json`                                                                                                           |
 | `/docs` or GPT schema 404              | Confirm `vercel.json` rewrites and that `docs/chatgpt-actions.yaml` is included (`includeFiles`)                                                                  |
 | Cold starts feel slow                  | Normal for serverless + Prisma; pin `regions`; warm with `/health` after deploy                                                                                   |
-| `vercel build` / Prisma client missing | `buildCommand` runs `bun run db:generate`; `postinstall` also generates the client                                                                                |
+| `vercel build` / Prisma client missing | `buildCommand` runs `bunx prisma generate`; `postinstall` also generates the client                                                                               |
+| `env: 'node': No such file or directory` on `prisma generate` | Use `bunx prisma generate` (not bare `prisma`) — Bun Vercel images often lack `node` in PATH                                                                     |
 
 ## Related docs
 

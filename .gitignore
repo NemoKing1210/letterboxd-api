@@ -6,10 +6,11 @@ node_modules/
 dist/
 .vercel/
 
-# Environment
+# Environment (keep only *.example templates in git)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
+!.env.*.example
 
 # IDE
 .idea/
