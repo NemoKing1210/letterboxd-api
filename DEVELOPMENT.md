@@ -53,7 +53,7 @@ bun run dev
 | --- | --- |
 | `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `DB_SCHEMA` | Discrete PostgreSQL settings (OpenServer-friendly) |
 | `DATABASE_URL` | Optional full URL; if set, overrides `DB_*` |
-| `SUPABASE_URL` / `SUPABASE_KEY` | Optional Supabase credentials |
+| `SUPABASE_URL` / `SUPABASE_KEY` | Optional; reserved — app uses Prisma + `DATABASE_URL` only (see [docs/supabase.md](docs/supabase.md)) |
 | `HTTPS_PROXY` / `HTTP_PROXY` | Optional outbound proxy URL (`http://user:pass@host:port`) for Letterboxd and other external HTTP |
 | `NO_PROXY` | Comma-separated hosts that bypass the proxy |
 | `LETTERBOXD_TIMEOUT` | Scraper HTTP timeout (ms) |
@@ -174,7 +174,7 @@ These stay public when auth is enabled (default `AUTH_PUBLIC_PATHS`). Full Custo
 
 Step-by-step production guides:
 
-1. **[docs/supabase.md](docs/supabase.md)** — create the project, enable pgvector, get connection strings, run migrations
+1. **[docs/supabase.md](docs/supabase.md)** — create the project, enable pgvector, Connect modes (Direct / Session / Transaction), migrations, security notes
 2. **[docs/vercel.md](docs/vercel.md)** — fast path (`setup:vercel` / `deploy`), env, CI secrets, verify
 
 Entrypoint on Vercel: [`api/index.ts`](api/index.ts) (see [`vercel.json`](vercel.json)). Minimal production env: [`.env.vercel.example`](.env.vercel.example).

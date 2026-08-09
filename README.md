@@ -51,7 +51,7 @@ Full local setup: **[DEVELOPMENT.md](DEVELOPMENT.md)**. Production: **[Supabase]
 | Document | Description |
 | --- | --- |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Local setup, env, scripts, Bruno |
-| [docs/supabase.md](docs/supabase.md) | Create Supabase Postgres, pgvector, migrations |
+| [docs/supabase.md](docs/supabase.md) | Supabase Postgres: Connect modes, pgvector, migrations |
 | [docs/vercel.md](docs/vercel.md) | Deploy on Vercel (fast path, CI, env) |
 | [docs/architecture.md](docs/architecture.md) | Layers, sync flow, extension points |
 | [docs/api.md](docs/api.md) | REST endpoints, query params, errors |

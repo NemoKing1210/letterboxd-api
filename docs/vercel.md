@@ -38,9 +38,9 @@ Minimal env list for the dashboard: [`.env.vercel.example`](../.env.vercel.examp
 bun add -g vercel   # or: npm i -g vercel
 bun run setup:vercel
 
-# 2. Migrations against the *direct* URL (not the pooler)
+# 2. Migrations against Direct or Session pooler (not transaction :6543)
 #    Windows PowerShell: $env:DATABASE_URL="postgresql://..."
-export DATABASE_URL="postgresql://...direct..."
+export DATABASE_URL="postgresql://...migrate-capable..."
 bun run db:migrate:deploy
 
 # 3. Local check against the Vercel runtime shape
@@ -61,7 +61,7 @@ On push to `main`, CI can migrate + deploy when these repository secrets exist:
 | `VERCEL_TOKEN` | [Vercel token](https://vercel.com/account/tokens) |
 | `VERCEL_ORG_ID` | From `.vercel/project.json` after `vercel link` |
 | `VERCEL_PROJECT_ID` | Same file |
-| `DATABASE_URL_DIRECT` | Supabase **direct** URL (migrations only) |
+| `DATABASE_URL_DIRECT` | Supabase **Direct** or **Session pooler** URL (migrations only — not transaction `:6543`) |
 
 Without those secrets, the migrate/deploy jobs no-op so forks stay green.
 
@@ -73,7 +73,8 @@ You can still use Vercel’s native Git integration instead of (or in addition t
 2. Apply migrations from your machine (or CI with `DATABASE_URL_DIRECT`):
 
 ```bash
-# Use the direct (non-pooler) URL for migrations — see Supabase guide
+# Use Direct or Session pooler for migrations — NOT transaction :6543
+# See docs/supabase.md (IPv4-only networks often need Session pooler)
 export DATABASE_URL=postgresql://...
 bun run db:migrate:deploy
 ```
@@ -89,7 +90,7 @@ bun run db:migrate:deploy
 5. Build command is already `bun run db:generate` via `vercel.json` (Prisma client). Override only if you know you need to.
 6. Click **Deploy** only after you add env vars (next section). If you already deployed once without env, add vars and **Redeploy**.
 
-Optional: install the [Supabase integration](https://vercel.com/integrations/supabase) so `DATABASE_URL` is injected for you — still prefer the **pooler** URL for the app runtime.
+Optional: install the [Supabase integration](https://vercel.com/integrations/supabase) so `DATABASE_URL` is injected for you — still prefer the **transaction pooler** (`:6543` + `pgbouncer=true`) for the app runtime.
 
 ### Region (latency)
 
@@ -116,7 +117,7 @@ bun run vercel:env
 
 | Name | Example / notes |
 | --- | --- |
-| `DATABASE_URL` | Supabase **pooler** URL for serverless (see [supabase.md](supabase.md#connection-strings)). Include `?schema=public`. For PgBouncer transaction mode append `&pgbouncer=true` when required. |
+| `DATABASE_URL` | Supabase **transaction pooler** (Supavisor port **6543**) for serverless — see [supabase.md](supabase.md#connection-strings). Include `?schema=public&pgbouncer=true` so Prisma disables prepared statements. |
 | `NODE_ENV` | `production` |
 
 You can use discrete `DB_*` instead of `DATABASE_URL`, but a single URL is simpler on Vercel.
@@ -193,7 +194,7 @@ Practical tips:
 ## 5. Production checklist
 
 - [ ] Migrations applied on the production database
-- [ ] `DATABASE_URL` points at the pooler (runtime) and works from Vercel’s region
+- [ ] `DATABASE_URL` points at the transaction pooler (`:6543`, `pgbouncer=true`) and works from Vercel’s region
 - [ ] Optional: `regions` in `vercel.json` matches Supabase
 - [ ] `AUTH_ENABLED=true` and a strong `AUTH_TOKENS` value
 - [ ] `/health`, `/privacy`, `/openapi-gpt-actions.yaml` stay public via `AUTH_PUBLIC_PATHS`
@@ -224,7 +225,7 @@ Use:
 
 | Symptom | What to check |
 | --- | --- |
-| `500` / Prisma “Can’t reach database” | `DATABASE_URL`, password URL-encoding, use pooler for serverless, IP allowlist (Supabase: allow all / Vercel egress) |
+| `500` / Prisma “Can’t reach database” | `DATABASE_URL` must be transaction pooler for Vercel; password URL-encoding; IPv4 vs IPv6 (see [supabase.md](supabase.md)); project paused / network restrictions |
 | Deploy OK but empty schema errors | Run `bun run db:migrate:deploy` against that DB (direct URL) |
 | `401 UNAUTHORIZED` | `AUTH_ENABLED`, `AUTH_TOKENS`, request header `X-API-Key` |
 | Sync / enrichment timeout | Function `maxDuration` / plan limits; reduce enrichment concurrency; sync a smaller user first |

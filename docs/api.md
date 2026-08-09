@@ -8,11 +8,11 @@ By default the API is open (`AUTH_ENABLED=false`). When `AUTH_ENABLED=true`, eve
 
 Configure methods with `AUTH_METHODS` (CSV). Any listed method may succeed:
 
-| Method | How to send |
-| --- | --- |
-| `api_key` | Header `X-API-Key: <token>` — tokens from `AUTH_TOKENS` |
-| `bearer` | Header `Authorization: Bearer <token>` — same `AUTH_TOKENS` |
-| `basic` | Header `Authorization: Basic …` — `AUTH_BASIC_USERNAME` / `AUTH_BASIC_PASSWORD` |
+| Method    | How to send                                                                     |
+| --------- | ------------------------------------------------------------------------------- |
+| `api_key` | Header `X-API-Key: <token>` — tokens from `AUTH_TOKENS`                         |
+| `bearer`  | Header `Authorization: Bearer <token>` — same `AUTH_TOKENS`                     |
+| `basic`   | Header `Authorization: Basic …` — `AUTH_BASIC_USERNAME` / `AUTH_BASIC_PASSWORD` |
 
 Failed auth returns `401` with `{ "error": { "code": "UNAUTHORIZED", ... } }` and may include `WWW-Authenticate` for bearer/basic. Query-string API keys are not supported.
 
@@ -32,10 +32,10 @@ When auth is enabled, OpenAPI advertises the active security schemes at `/openap
 
 Public by default (included in `AUTH_PUBLIC_PATHS`):
 
-| Path | Description |
-| --- | --- |
-| `GET /privacy` | Short HTML privacy notice (GPT Builder privacy URL) |
-| `GET /openapi-gpt-actions.yaml` | Curated OpenAPI schema for Custom GPT Actions |
+| Path                            | Description                                         |
+| ------------------------------- | --------------------------------------------------- |
+| `GET /privacy`                  | Short HTML privacy notice (GPT Builder privacy URL) |
+| `GET /openapi-gpt-actions.yaml` | Curated OpenAPI schema for Custom GPT Actions       |
 
 Setup guide: [chatgpt-actions.md](chatgpt-actions.md). Repo copy of the schema: [`chatgpt-actions.yaml`](chatgpt-actions.yaml).
 
@@ -51,14 +51,14 @@ Lists users already stored locally (after at least one sync). Does **not** trigg
 
 Query params:
 
-| Param | Description |
-| --- | --- |
-| `followersMin` / `followersMax` | Followers count range |
-| `followingMin` / `followingMax` | Following count range |
-| `moviesMin` / `moviesMax` | Diary size (synced movies) range |
-| `q` / `search` | Case-insensitive username contains (aliases; must be identical if both are set) |
-| `sort` | `username_asc`, `username_desc`, `created_desc`, `created_asc`, `updated_desc`, `updated_asc`, `followers_desc`, `followers_asc`, `following_desc`, `following_asc`, `movies_desc`, `movies_asc` |
-| `page` / `limit` | Pagination (`limit` default **20**, max **100**) |
+| Param                           | Description                                                                                                                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `followersMin` / `followersMax` | Followers count range                                                                                                                                                                            |
+| `followingMin` / `followingMax` | Following count range                                                                                                                                                                            |
+| `moviesMin` / `moviesMax`       | Diary size (synced movies) range                                                                                                                                                                 |
+| `q` / `search`                  | Case-insensitive username contains (aliases; must be identical if both are set)                                                                                                                  |
+| `sort`                          | `username_asc`, `username_desc`, `created_desc`, `created_asc`, `updated_desc`, `updated_asc`, `followers_desc`, `followers_asc`, `following_desc`, `following_asc`, `movies_desc`, `movies_asc` |
+| `page` / `limit`                | Pagination (`limit` default **20**, max **100**)                                                                                                                                                 |
 
 ```json
 {
@@ -72,9 +72,7 @@ Query params:
       "lastSyncedAt": "2026-08-06T12:00:00.000Z",
       "followingCount": 1,
       "followersCount": 2,
-      "externalLinks": [
-        { "label": "linktr.ee", "url": "https://linktr.ee/example" }
-      ],
+      "externalLinks": [{ "label": "linktr.ee", "url": "https://linktr.ee/example" }],
       "favoriteFilms": [
         {
           "slug": "inception",
@@ -110,9 +108,7 @@ Each `items[]` entry uses the same shape as `GET /api/users/:username`.
   "lastSyncedAt": "2026-08-06T12:00:00.000Z",
   "followingCount": 1,
   "followersCount": 2,
-  "externalLinks": [
-    { "label": "linktr.ee", "url": "https://linktr.ee/example" }
-  ],
+  "externalLinks": [{ "label": "linktr.ee", "url": "https://linktr.ee/example" }],
   "favoriteFilms": [
     {
       "slug": "inception",
@@ -156,16 +152,16 @@ Used by: `/movies` (`items`), `/ratings` (`bestMovies` / `worstMovies`), `/favor
 
 Query params:
 
-| Param | Description |
-| --- | --- |
-| `ratingMin` / `ratingMax` | 0–5 |
-| `year` | Exact year |
-| `yearFrom` / `yearTo` | Range |
-| `genre` | Exact genre token (lowercase; filled by Letterboxd film-page enrichment) |
-| `director` | Case-insensitive contains |
-| `q` / `search` | Case-insensitive title or slug contains (aliases; must be identical if both are set) |
-| `sort` | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
-| `page` / `limit` | Pagination (`limit` default **20**, max **100**) |
+| Param                     | Description                                                                                |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `ratingMin` / `ratingMax` | 0–5                                                                                        |
+| `year`                    | Exact year                                                                                 |
+| `yearFrom` / `yearTo`     | Range                                                                                      |
+| `genre`                   | Exact genre token (lowercase; filled by Letterboxd film-page enrichment)                   |
+| `director`                | Case-insensitive contains                                                                  |
+| `q` / `search`            | Case-insensitive title or slug contains (aliases; must be identical if both are set)       |
+| `sort`                    | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
+| `page` / `limit`          | Pagination (`limit` default **20**, max **100**)                                           |
 
 Paginated response: `{ items: Movie[], page, limit, total, totalPages }`. Omitting `limit` still applies the default of 20 — unbounded lists are not supported.
 
@@ -221,11 +217,11 @@ Response: `{ items: Movie[], page, limit, total, totalPages }`.
 
 Facet lists (same pagination; sorted by `count` desc, then `name` asc):
 
-| Path | Description |
-| --- | --- |
+| Path                                           | Description                                                    |
+| ---------------------------------------------- | -------------------------------------------------------------- |
 | `GET /api/users/:username/favorites/directors` | `{ items: [{ name, count }], page, limit, total, totalPages }` |
-| `GET /api/users/:username/favorites/genres` | same shape |
-| `GET /api/users/:username/favorites/years` | same shape |
+| `GET /api/users/:username/favorites/genres`    | same shape                                                     |
+| `GET /api/users/:username/favorites/years`     | same shape                                                     |
 
 ### Statistics
 

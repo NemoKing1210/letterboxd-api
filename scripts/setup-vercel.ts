@@ -56,14 +56,15 @@ if (pullCode !== 0) {
 
 console.log(`
 Next steps:
-  1. Ensure Postgres migrations are applied (direct URL, not pooler):
-       set DATABASE_URL=<direct-url>
+  1. Ensure Postgres migrations are applied (Direct or Session pooler — not transaction :6543):
+       set DATABASE_URL=<migrate-url>
        bun run db:migrate:deploy
   2. Match Supabase region in vercel.json "regions" if you add one (see docs/vercel.md)
-  3. Preview like production:
+  3. Runtime DATABASE_URL on Vercel should be transaction pooler (:6543 + pgbouncer=true)
+  4. Preview like production:
        bun run vercel:dev
-  4. Deploy:
+  5. Deploy:
        bun run deploy
 
-Checklist: docs/vercel.md
+Guides: docs/supabase.md · docs/vercel.md
 `);
