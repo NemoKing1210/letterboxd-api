@@ -2,7 +2,7 @@
 
 ## Overview
 
-Letterboxd Intelligence API follows Clean Architecture with feature modules and a thin HTTP layer.
+Letterboxd API follows Clean Architecture with feature modules and a thin HTTP layer.
 
 ```mermaid
 flowchart TB
@@ -42,8 +42,8 @@ sequenceDiagram
   participant DB as Repositories
   participant Cache
 
-  Client->>API: POST /api/users/:username/sync
-  API->>Sync: syncLetterboxdUser
+  Client->>API: GET /api/users/:username/... (user missing locally)
+  API->>Sync: syncLetterboxdUser (lazy)
   Sync->>DB: create SyncHistory RUNNING
   Sync->>LB: getProfile + getMovies
   LB-->>Sync: films
@@ -51,7 +51,9 @@ sequenceDiagram
   Sync->>DB: update SyncHistory SUCCESS
   Sync->>Cache: invalidate user keys
   Sync-->>API: SyncResponse
-  API-->>Client: 200 JSON
+  API-->>Client: 200 JSON (requested resource)
+
+  Note over Client,Cache: POST /api/users/:username/sync forces the same scrape cycle explicitly
 ```
 
 ## Extension points

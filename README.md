@@ -1,4 +1,4 @@
-# Letterboxd Intelligence API
+# Letterboxd API
 
 Production-ready API for analyzing Letterboxd film taste: sync user data, filter movies, compute statistics, and prepare for AI recommendations.
 
@@ -108,7 +108,7 @@ bun run dev
 
 | Method | Path | Description |
 | --- | --- | --- |
-| `GET` | `/api/users/:username` | Profile (auto-syncs if missing) |
+| `GET` | `/api/users/:username` | Profile |
 | `GET` | `/api/users/:username/movies` | Filtered movie list |
 | `GET` | `/api/users/:username/ratings` | Ratings summary |
 | `GET` | `/api/users/:username/favorites` | Favorites summary |
@@ -116,11 +116,13 @@ bun run dev
 | `GET` | `/api/users/:username/recommendations` | Rule-based recommendations |
 | `POST` | `/api/users/:username/sync` | Force Letterboxd sync |
 
+User-scoped `GET` endpoints auto-sync from Letterboxd when the user is missing locally (first request may be slow).
+
 Example:
 
 ```bash
-curl -X POST http://localhost:3000/api/users/USERNAME/sync
 curl "http://localhost:3000/api/users/USERNAME/movies?ratingMin=4&sort=rating_desc&limit=20"
+curl -X POST http://localhost:3000/api/users/USERNAME/sync
 ```
 
 ## Scripts

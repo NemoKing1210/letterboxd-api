@@ -11,4 +11,4 @@ export default {
   fetch: app.fetch,
 };
 
-container.logger.info({ port }, 'Letterboxd Intelligence API listening');
+container.logger.info({ port }, 'Letterboxd API listening');

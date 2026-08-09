@@ -170,7 +170,7 @@ export function createApp(container: AppContainer) {
   app.get('/health', (c) =>
     c.json({
       status: 'ok',
-      service: 'letterboxd-intelligence-api',
+      service: 'letterboxd-api',
       timestamp: new Date().toISOString(),
     }),
   );
@@ -335,8 +335,8 @@ export function createApp(container: AppContainer) {
   app.doc('/openapi.json', {
     openapi: '3.1.0',
     info: {
-      title: 'Letterboxd Intelligence API',
-      version: '1.0.2',
+      title: 'Letterboxd API',
+      version: '1.1.1',
       description:
         'Analyze Letterboxd film taste: sync, filter, statistics, and AI-ready recommendations.',
     },

@@ -3,7 +3,7 @@ import { ExternalServiceError } from '../../shared/errors/app-error';
 import { sleep } from '../../shared/utils';
 
 export const DEFAULT_SCRAPER_USER_AGENT =
-  'LetterboxdIntelligenceAPI/1.0 (+https://github.com/letterboxd-intelligence-api; personal use)';
+  'LetterboxdAPI/1.0 (+https://github.com/letterboxd-api; personal use)';
 
 /** Navigation-like headers — Cloudflare often challenges bare scrapes without these. */
 export const DEFAULT_SCRAPER_HEADERS: Record<string, string> = {

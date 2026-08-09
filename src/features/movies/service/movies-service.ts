@@ -1,7 +1,10 @@
 import type { UserMovieRepository, UserRepository } from '../../../infrastructure/database';
-import { NotFoundError } from '../../../shared/errors/app-error';
 import { createPaginatedResult, type PaginatedResult } from '../../../shared/types';
 import { normalizeUsername } from '../../../shared/utils';
+import {
+  ensureLocalUser,
+  type UserSyncTrigger,
+} from '../../users/service/ensure-local-user';
 import type { MovieQuery } from '../schemas/movie-schemas';
 
 export type MovieDto = {
@@ -20,6 +23,8 @@ export type MovieDto = {
 export type MoviesServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
+  syncService: UserSyncTrigger;
+  autoSyncIfMissing?: boolean;
 };
 
 export class MoviesService {
@@ -27,10 +32,7 @@ export class MoviesService {
 
   async listMovies(username: string, query: MovieQuery): Promise<PaginatedResult<MovieDto>> {
     const normalized = normalizeUsername(username);
-    const user = await this.deps.users.findByUsername(normalized);
-    if (!user) {
-      throw new NotFoundError(`User "${normalized}" not found. Sync the user first.`);
-    }
+    const user = await ensureLocalUser(normalized, this.deps);
 
     const { items, total } = await this.deps.userMovies.findFiltered(user.id, query);
 

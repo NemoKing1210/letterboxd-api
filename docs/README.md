@@ -1,6 +1,6 @@
 # Documentation
 
-Letterboxd Intelligence API — project documentation.
+Letterboxd API — project documentation.
 
 ## Contents
 

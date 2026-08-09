@@ -9,14 +9,16 @@ Interactive docs: `GET /docs` (Swagger UI). Spec: `GET /openapi.json`.
 `GET /health`
 
 ```json
-{ "status": "ok", "service": "letterboxd-intelligence-api", "timestamp": "..." }
+{ "status": "ok", "service": "letterboxd-api", "timestamp": "..." }
 ```
+
+### Lazy sync
+
+All user-scoped `GET` endpoints below auto-sync from Letterboxd when the username is not in the local database yet. The first request may take longer (full scrape); later requests use stored data. Use `POST .../sync` to force a refresh.
 
 ### User profile
 
 `GET /api/users/:username`
-
-If the user is missing locally, the API triggers a Letterboxd sync (lazy).
 
 ```json
 {

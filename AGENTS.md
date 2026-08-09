@@ -4,7 +4,7 @@ Rules for AI coding agents working in this repository.
 
 ## Project
 
-**Letterboxd Intelligence API** — Bun + Hono + Prisma + PostgreSQL service that syncs Letterboxd data, stores it, and exposes filters/statistics. AI recommendations are a future extension point, not the current scope unless explicitly requested.
+**Letterboxd API** — Bun + Hono + Prisma + PostgreSQL service that syncs Letterboxd data, stores it, and exposes filters/statistics. AI recommendations are a future extension point, not the current scope unless explicitly requested.
 
 Stack: TypeScript, Bun, Hono, Zod, Prisma, Vitest, Pino. Deploy target: Vercel.
 

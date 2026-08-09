@@ -1,30 +1,34 @@
 import type { UserMovieRepository, UserRepository } from '../../../infrastructure/database';
-import { NotFoundError } from '../../../shared/errors/app-error';
 import { countBy, normalizeUsername, topN } from '../../../shared/utils';
+import {
+  ensureLocalUser,
+  type UserSyncTrigger,
+} from '../../users/service/ensure-local-user';
 import type {
   Recommendation,
   RecommendationEngine,
   RecommendationOptions,
 } from '../types/recommendation-engine';
 
+export type RuleBasedRecommendationEngineDeps = {
+  users: UserRepository;
+  userMovies: UserMovieRepository;
+  syncService: UserSyncTrigger;
+  autoSyncIfMissing?: boolean;
+};
+
 /**
  * Rule-based stub. Replace with OpenAI / embeddings / RAG in v3 without changing callers.
  */
 export class RuleBasedRecommendationEngine implements RecommendationEngine {
-  constructor(
-    private readonly users: UserRepository,
-    private readonly userMovies: UserMovieRepository,
-  ) {}
+  constructor(private readonly deps: RuleBasedRecommendationEngineDeps) {}
 
   async recommend(username: string, options: RecommendationOptions = {}): Promise<Recommendation[]> {
     const limit = options.limit ?? 5;
     const normalized = normalizeUsername(username);
-    const user = await this.users.findByUsername(normalized);
-    if (!user) {
-      throw new NotFoundError(`User "${normalized}" not found. Sync the user first.`);
-    }
+    const user = await ensureLocalUser(normalized, this.deps);
 
-    const entries = await this.userMovies.findAllForUser(user.id);
+    const entries = await this.deps.userMovies.findAllForUser(user.id);
     const highlyRated = entries.filter((e) => e.rating !== null && e.rating >= 4);
 
     const topDirectors = topN(countBy(highlyRated, (e) => e.movie.director), 3);

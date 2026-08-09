@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for contributing to Letterboxd Intelligence API.
+Thanks for contributing to Letterboxd API.
 
 ## Branches
 

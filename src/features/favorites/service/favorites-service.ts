@@ -2,8 +2,11 @@ import type { CacheProvider } from '../../../infrastructure/cache';
 import type { UserMovieRepository, UserRepository } from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
 import { CACHE_KEYS } from '../../../shared/constants';
-import { NotFoundError } from '../../../shared/errors/app-error';
 import { countBy, normalizeUsername, topN } from '../../../shared/utils';
+import {
+  ensureLocalUser,
+  type UserSyncTrigger,
+} from '../../users/service/ensure-local-user';
 
 export type FavoritesSummary = {
   favoriteMovies: Array<{ title: string; year: number | null; rating: number | null; slug: string | null }>;
@@ -15,8 +18,10 @@ export type FavoritesSummary = {
 export type FavoritesServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
+  syncService: UserSyncTrigger;
   cache: CacheProvider;
   env: Env;
+  autoSyncIfMissing?: boolean;
 };
 
 export class FavoritesService {
@@ -28,10 +33,7 @@ export class FavoritesService {
     const cached = await this.deps.cache.get<FavoritesSummary>(cacheKey);
     if (cached) return cached;
 
-    const user = await this.deps.users.findByUsername(normalized);
-    if (!user) {
-      throw new NotFoundError(`User "${normalized}" not found. Sync the user first.`);
-    }
+    const user = await ensureLocalUser(normalized, this.deps);
 
     const entries = await this.deps.userMovies.findAllForUser(user.id);
     const liked = entries.filter((e) => e.favorite || (e.rating !== null && e.rating >= 4.5));

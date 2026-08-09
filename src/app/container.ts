@@ -95,16 +95,22 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
       env,
     });
 
-  const moviesService = overrides?.moviesService ?? new MoviesService({ users, userMovies });
+  const moviesService =
+    overrides?.moviesService ?? new MoviesService({ users, userMovies, syncService });
   const ratingsService =
-    overrides?.ratingsService ?? new RatingsService({ users, userMovies, cache, env });
+    overrides?.ratingsService ??
+    new RatingsService({ users, userMovies, syncService, cache, env });
   const favoritesService =
-    overrides?.favoritesService ?? new FavoritesService({ users, userMovies, cache, env });
+    overrides?.favoritesService ??
+    new FavoritesService({ users, userMovies, syncService, cache, env });
   const statisticsService =
-    overrides?.statisticsService ?? new StatisticsService({ users, userMovies, cache, env });
+    overrides?.statisticsService ??
+    new StatisticsService({ users, userMovies, syncService, cache, env });
   const recommendationService =
     overrides?.recommendationService ??
-    new RecommendationService(new RuleBasedRecommendationEngine(users, userMovies));
+    new RecommendationService(
+      new RuleBasedRecommendationEngine({ users, userMovies, syncService }),
+    );
 
   return {
     env,

@@ -2,16 +2,15 @@ import type { CacheProvider } from '../../../infrastructure/cache';
 import type { SyncHistoryRepository, UserRepository, UserMovieRepository } from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
 import { CACHE_KEYS } from '../../../shared/constants';
-import { NotFoundError } from '../../../shared/errors/app-error';
 import { average, countBy, normalizeUsername, topN } from '../../../shared/utils';
 import type { UserProfile } from '../schemas/user-schemas';
-import type { SynchronizationService } from '../../synchronization/service/synchronization-service';
+import { ensureLocalUser, type UserSyncTrigger } from './ensure-local-user';
 
 export type UsersServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
   syncHistory: SyncHistoryRepository;
-  syncService: SynchronizationService;
+  syncService: UserSyncTrigger;
   cache: CacheProvider;
   env: Env;
   autoSyncIfMissing?: boolean;
@@ -26,16 +25,7 @@ export class UsersService {
     const cached = await this.deps.cache.get<UserProfile>(cacheKey);
     if (cached) return cached;
 
-    let user = await this.deps.users.findByUsername(normalized);
-
-    if (!user && this.deps.autoSyncIfMissing !== false) {
-      await this.deps.syncService.syncLetterboxdUser(normalized);
-      user = await this.deps.users.findByUsername(normalized);
-    }
-
-    if (!user) {
-      throw new NotFoundError(`User "${normalized}" not found`);
-    }
+    const user = await ensureLocalUser(normalized, this.deps);
 
     const entries = await this.deps.userMovies.findAllForUser(user.id);
     const ratings = entries.map((e) => e.rating).filter((r): r is number => r !== null);

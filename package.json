@@ -1,7 +1,7 @@
 {
-  "name": "letterboxd-intelligence-api",
-  "version": "1.0.2",
-  "description": "Production-ready Letterboxd Intelligence API — analyze, filter, and understand film taste",
+  "name": "letterboxd-api",
+  "version": "1.1.1",
+  "description": "Production-ready Letterboxd API — analyze, filter, and understand film taste",
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
@@ -31,7 +31,7 @@
     "prisma",
     "typescript"
   ],
-  "author": "Letterboxd Intelligence API Contributors",
+  "author": "Letterboxd API Contributors",
   "license": "MIT",
   "engines": {
     "bun": ">=1.1.0"

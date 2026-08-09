@@ -2,8 +2,11 @@ import type { CacheProvider } from '../../../infrastructure/cache';
 import type { UserMovieRepository, UserRepository } from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
 import { CACHE_KEYS } from '../../../shared/constants';
-import { NotFoundError } from '../../../shared/errors/app-error';
 import { average, countBy, decadeFromYear, normalizeUsername, topN } from '../../../shared/utils';
+import {
+  ensureLocalUser,
+  type UserSyncTrigger,
+} from '../../users/service/ensure-local-user';
 
 export type StatisticsSummary = {
   moviesWatched: number;
@@ -16,8 +19,10 @@ export type StatisticsSummary = {
 export type StatisticsServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
+  syncService: UserSyncTrigger;
   cache: CacheProvider;
   env: Env;
+  autoSyncIfMissing?: boolean;
 };
 
 export class StatisticsService {
@@ -29,10 +34,7 @@ export class StatisticsService {
     const cached = await this.deps.cache.get<StatisticsSummary>(cacheKey);
     if (cached) return cached;
 
-    const user = await this.deps.users.findByUsername(normalized);
-    if (!user) {
-      throw new NotFoundError(`User "${normalized}" not found. Sync the user first.`);
-    }
+    const user = await ensureLocalUser(normalized, this.deps);
 
     const entries = await this.deps.userMovies.findAllForUser(user.id);
     const ratings = entries.map((e) => e.rating).filter((r): r is number => r !== null);
