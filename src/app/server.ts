@@ -3,6 +3,12 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { cors } from 'hono/cors';
 import type { AppContainer } from './container';
 import {
+  GPT_ACTIONS_OPENAPI_PATH,
+  PRIVACY_PATH,
+  loadGptActionsOpenApiYaml,
+  renderPrivacyHtml,
+} from './chatgpt/gpt-actions-assets';
+import {
   authMiddleware,
   rateLimitMiddleware,
   requestIdMiddleware,
@@ -151,6 +157,27 @@ export function createApp(container: AppContainer) {
       timestamp: new Date().toISOString(),
     }),
   );
+
+  app.get(PRIVACY_PATH, (c) => c.html(renderPrivacyHtml()));
+
+  app.get(GPT_ACTIONS_OPENAPI_PATH, (c) => {
+    const yaml = loadGptActionsOpenApiYaml();
+    if (yaml === null) {
+      return c.json(
+        {
+          error: {
+            code: 'NOT_FOUND',
+            message: 'ChatGPT Actions OpenAPI schema file is missing on the server',
+          },
+        },
+        404,
+      );
+    }
+    return c.newResponse(yaml, 200, {
+      'Content-Type': 'text/yaml; charset=utf-8',
+      'Cache-Control': 'public, max-age=300',
+    });
+  });
 
   const getUserRoute = createRoute({
     method: 'get',
@@ -446,7 +473,7 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '3.1.1',
+      version: '3.2.1',
       description:
         'Analyze Letterboxd film taste: sync, filter, search, statistics, and AI recommendations (embeddings + optional LLM).',
     },

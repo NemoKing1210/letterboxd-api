@@ -38,7 +38,7 @@ function createTestEnv(overrides: Partial<Env> = {}): Env {
     AUTH_TOKENS: [],
     AUTH_BASIC_USERNAME: '',
     AUTH_BASIC_PASSWORD: '',
-    AUTH_PUBLIC_PATHS: ['/health'],
+    AUTH_PUBLIC_PATHS: ['/health', '/privacy', '/openapi-gpt-actions.yaml'],
     OPENAI_API_KEY: '',
     OPENAI_BASE_URL: 'https://api.openai.com/v1',
     OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
@@ -244,7 +244,7 @@ describe('API integration', () => {
           AUTH_ENABLED: true,
           AUTH_METHODS: ['api_key', 'bearer'],
           AUTH_TOKENS: ['test-secret'],
-          AUTH_PUBLIC_PATHS: ['/health'],
+          AUTH_PUBLIC_PATHS: ['/health', '/privacy', '/openapi-gpt-actions.yaml'],
         }),
       });
     }
@@ -279,10 +279,28 @@ describe('API integration', () => {
       expect(res.status).toBe(200);
     });
 
-    it('keeps /health public by default', async () => {
+    it('keeps health, privacy, and GPT Actions schema public', async () => {
       const app = createApp(authContainer());
-      const res = await app.request('/health');
-      expect(res.status).toBe(200);
+      expect((await app.request('/health')).status).toBe(200);
+      expect((await app.request('/privacy')).status).toBe(200);
+      expect((await app.request('/openapi-gpt-actions.yaml')).status).toBe(200);
     });
+  });
+
+  it('serves privacy HTML and ChatGPT Actions OpenAPI schema', async () => {
+    const app = createApp(createTestContainer());
+
+    const privacy = await app.request('/privacy');
+    expect(privacy.status).toBe(200);
+    expect(privacy.headers.get('content-type')).toMatch(/text\/html/);
+    const privacyHtml = await privacy.text();
+    expect(privacyHtml).toContain('Privacy notice');
+
+    const schema = await app.request('/openapi-gpt-actions.yaml');
+    expect(schema.status).toBe(200);
+    expect(schema.headers.get('content-type')).toMatch(/yaml/);
+    const yaml = await schema.text();
+    expect(yaml).toContain('operationId: getRecommendations');
+    expect(yaml).toContain('operationId: getUserProfile');
   });
 });

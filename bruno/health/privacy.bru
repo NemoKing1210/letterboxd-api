@@ -1,0 +1,32 @@
+meta {
+  name: Privacy Notice
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/privacy
+  body: none
+  auth: none
+}
+
+headers {
+  accept: text/html
+}
+
+docs {
+  Short HTML privacy page for ChatGPT Custom GPT Builder (Privacy Policy URL).
+  Public by default (`AUTH_PUBLIC_PATHS`). See docs/chatgpt-actions.md.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("body looks like privacy HTML", function() {
+    const body = res.getBody();
+    const text = typeof body === "string" ? body : JSON.stringify(body);
+    expect(text).to.include("Privacy notice");
+  });
+}

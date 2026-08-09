@@ -97,7 +97,7 @@ describe('createAuthenticator', () => {
     AUTH_TOKENS: [] as string[],
     AUTH_BASIC_USERNAME: '',
     AUTH_BASIC_PASSWORD: '',
-    AUTH_PUBLIC_PATHS: ['/health'],
+    AUTH_PUBLIC_PATHS: ['/health', '/privacy', '/openapi-gpt-actions.yaml'],
   } as unknown as Env;
 
   it('noop when disabled', () => {

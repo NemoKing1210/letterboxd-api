@@ -1,5 +1,5 @@
 meta {
-  name: Letterboxd Intelligence API
+  name: Letterboxd API
 }
 
 headers {
@@ -47,6 +47,15 @@ docs {
   
   - **Get Recommendations** — AI path when the server has `OPENAI_API_KEY` + pgvector;
     otherwise rule-based fallback. Optional fields: `slug`, `movieId`, `year`, `poster`.
+
+  ## ChatGPT Custom GPT Actions
+  
+  Public helpers (no API key required by default):
+  
+  - **Privacy Notice** — `GET /privacy` (GPT Builder privacy URL)
+  - **OpenAPI GPT Actions Schema** — `GET /openapi-gpt-actions.yaml`
+  
+  Setup guide: docs/chatgpt-actions.md
   
   Interactive docs: `{{baseUrl}}/docs`
 }

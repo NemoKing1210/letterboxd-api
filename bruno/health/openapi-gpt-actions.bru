@@ -1,0 +1,33 @@
+meta {
+  name: OpenAPI GPT Actions Schema
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/openapi-gpt-actions.yaml
+  body: none
+  auth: none
+}
+
+headers {
+  accept: text/yaml
+}
+
+docs {
+  Curated OpenAPI schema for ChatGPT Custom GPT Actions.
+  Import this URL (or paste docs/chatgpt-actions.yaml) in the GPT builder.
+  Public by default (`AUTH_PUBLIC_PATHS`). See docs/chatgpt-actions.md.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("schema includes recommendation action", function() {
+    const body = res.getBody();
+    const text = typeof body === "string" ? body : JSON.stringify(body);
+    expect(text).to.include("operationId: getRecommendations");
+  });
+}

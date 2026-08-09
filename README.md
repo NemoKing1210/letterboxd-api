@@ -111,7 +111,7 @@ bun run dev
 | `AUTH_METHODS` | CSV: `api_key`, `bearer`, `basic` (default `api_key,bearer`) |
 | `AUTH_TOKENS` | CSV secrets for `api_key` / `bearer` (required when those methods are enabled) |
 | `AUTH_BASIC_USERNAME` / `AUTH_BASIC_PASSWORD` | HTTP Basic credentials (required when `basic` is enabled) |
-| `AUTH_PUBLIC_PATHS` | CSV exact paths that skip auth (default `/health`) |
+| `AUTH_PUBLIC_PATHS` | CSV exact paths that skip auth (default `/health,/privacy,/openapi-gpt-actions.yaml`) |
 
 ### Making the API private
 
@@ -129,6 +129,16 @@ curl -u USER:PASS "http://localhost:3000/api/users/USERNAME/movies"
 ```
 
 Do not pass tokens in query strings (they leak into logs and proxies).
+
+## ChatGPT Custom GPT
+
+You can connect this API to a ChatGPT **Custom GPT** via **Actions** so the model calls your endpoints for watch history, ratings, and recommendations.
+
+1. Deploy the API on public HTTPS (Vercel) with `AUTH_ENABLED=true` and an `AUTH_TOKENS` secret.
+2. In ChatGPT → Create a GPT → Actions, import `https://YOUR_HOST/openapi-gpt-actions.yaml` (or paste [`docs/chatgpt-actions.yaml`](docs/chatgpt-actions.yaml)).
+3. Set Action auth to API Key header `X-API-Key`, and Privacy Policy URL to `https://YOUR_HOST/privacy`.
+
+Step-by-step instructions, GPT Instructions template, and a test checklist: [docs/chatgpt-actions.md](docs/chatgpt-actions.md).
 
 ## API overview
 
@@ -177,10 +187,11 @@ bun run db:studio     # prisma studio
 
 - [Architecture](docs/architecture.md)
 - [API](docs/api.md)
+- [ChatGPT Custom GPT Actions](docs/chatgpt-actions.md)
 - [Database](docs/database.md)
 - [Development](docs/development.md)
 - [Roadmap](docs/roadmap.md)
-- Bruno collection: open the [`bruno/`](bruno/) folder in [Bruno](https://www.usebruno.com/) (Local env → set `username`)
+- Bruno collection: open the [`bruno/`](bruno/) folder in [Bruno](https://www.usebruno.com/) (Local env → set `username`; includes `/privacy` and GPT Actions schema)
 
 ## Contributing
 

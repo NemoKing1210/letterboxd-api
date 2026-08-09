@@ -1,0 +1,536 @@
+openapi: 3.1.0
+info:
+  title: Letterboxd API (ChatGPT Actions)
+  description: >
+    Personal Letterboxd film taste API for Custom GPT Actions.
+    Use these operations to inspect a user's watch history, ratings, favorites,
+    statistics, and personalized recommendations. Always pass the Letterboxd
+    username. Prefer pagination (limit ≤ 20) instead of fetching entire diaries.
+  version: 3.2.1
+servers:
+  - url: https://YOUR_DEPLOYMENT.example.com
+    description: Replace with your deployed Letterboxd API base URL (no trailing slash)
+security:
+  - ApiKeyAuth: []
+paths:
+  /api/users/{username}:
+    get:
+      operationId: getUserProfile
+      summary: Get Letterboxd user profile and taste snapshot
+      description: >
+        Returns profile aggregates, favorite genres, pinned favorite films,
+        recent likes, and last sync time. Call this for a high-level taste overview.
+      parameters:
+        - $ref: '#/components/parameters/Username'
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{username}/movies:
+    get:
+      operationId: listMovies
+      summary: List or search films the user has logged
+      description: >
+        Paginated watch history with optional title search and rating filters.
+        Use q to check if the user has seen a specific film. Always set a modest limit.
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - name: q
+          in: query
+          description: Case-insensitive title or slug contains (e.g. Arrival)
+          schema:
+            type: string
+        - name: ratingMin
+          in: query
+          description: Minimum user rating (0–5)
+          schema:
+            type: number
+            minimum: 0
+            maximum: 5
+        - name: ratingMax
+          in: query
+          description: Maximum user rating (0–5)
+          schema:
+            type: number
+            minimum: 0
+            maximum: 5
+        - name: sort
+          in: query
+          description: Sort order
+          schema:
+            type: string
+            enum:
+              - rating_desc
+              - rating_asc
+              - date_desc
+              - date_asc
+              - year_desc
+              - year_asc
+              - title_asc
+            default: date_desc
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Page size (default 20, max 100). Prefer ≤ 20 for GPT Actions.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated movies
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMovies'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{username}/ratings:
+    get:
+      operationId: getRatings
+      summary: Get ratings summary (average, best, worst)
+      description: >
+        Returns average rating, count, distribution, and best/worst rated films.
+      parameters:
+        - $ref: '#/components/parameters/Username'
+      responses:
+        '200':
+          description: Ratings summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RatingsSummary'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{username}/favorites:
+    get:
+      operationId: listFavorites
+      summary: List favorite movies
+      description: >
+        Paginated favorites (liked films or rating ≥ 4.5). Same pagination as listMovies.
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - name: q
+          in: query
+          description: Case-insensitive title or slug contains
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum:
+              - rating_desc
+              - rating_asc
+              - date_desc
+              - date_asc
+              - year_desc
+              - year_asc
+              - title_asc
+            default: rating_desc
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Paginated favorites
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMovies'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{username}/statistics:
+    get:
+      operationId: getStatistics
+      summary: Get watch statistics and top genres/directors
+      description: >
+        Aggregate stats including movies watched, average rating, top genres,
+        directors, and decades. Use for "what genres do I like?" questions.
+      parameters:
+        - $ref: '#/components/parameters/Username'
+      responses:
+        '200':
+          description: Statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Statistics'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{username}/recommendations:
+    get:
+      operationId: getRecommendations
+      summary: Get personalized film recommendations
+      description: >
+        Returns personalized recommendations based on the user's Letterboxd taste
+        (AI embeddings when configured; otherwise rule-based). Prefer this for
+        "what should I watch?" questions.
+      parameters:
+        - $ref: '#/components/parameters/Username'
+        - name: limit
+          in: query
+          description: Number of recommendations (default 5)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 20
+            default: 5
+      responses:
+        '200':
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recommendations'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{username}/search:
+    post:
+      operationId: searchMovies
+      summary: Advanced nested filter search over the user's films
+      description: >
+        Search with a structured filter DSL (field/op/value, optionally nested and/or).
+        Use when listMovies query params are not enough (e.g. genre + year range).
+      parameters:
+        - $ref: '#/components/parameters/Username'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SearchBody'
+            examples:
+              titleContains:
+                summary: Title contains
+                value:
+                  filter:
+                    field: title
+                    op: contains
+                    value: matrix
+                  page: 1
+                  limit: 10
+              genreAndYear:
+                summary: Genre and year range
+                value:
+                  filter:
+                    op: and
+                    conditions:
+                      - field: genre
+                        op: eq
+                        value: sci-fi
+                      - field: year
+                        op: between
+                        value: 2010
+                        valueTo: 2020
+                  page: 1
+                  limit: 20
+      responses:
+        '200':
+          description: Paginated search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedMovies'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /api/users/{username}/sync:
+    post:
+      operationId: syncUser
+      summary: Force a Letterboxd data sync
+      description: >
+        Forces a scrape/refresh of the user's Letterboxd lists into the API database.
+        Use only when the user asks to refresh data or results look stale. May take longer.
+      parameters:
+        - $ref: '#/components/parameters/Username'
+      responses:
+        '200':
+          description: Sync result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  syncId:
+                    type: string
+                  username:
+                    type: string
+                  status:
+                    type: string
+                  moviesSynced:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API token from AUTH_TOKENS when AUTH_ENABLED=true
+  parameters:
+    Username:
+      name: username
+      in: path
+      required: true
+      description: Letterboxd username (profile slug)
+      schema:
+        type: string
+        minLength: 1
+  responses:
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+    NotFound:
+      description: User not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorBody'
+  schemas:
+    ErrorBody:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string
+    Movie:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        year:
+          type: integer
+          nullable: true
+        slug:
+          type: string
+        url:
+          type: string
+        poster:
+          type: string
+          nullable: true
+        genres:
+          type: array
+          items:
+            type: string
+        director:
+          type: string
+          nullable: true
+        rating:
+          type: number
+          nullable: true
+        favorite:
+          type: boolean
+        watchedDate:
+          type: string
+          nullable: true
+    PaginatedMovies:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/Movie'
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        totalPages:
+          type: integer
+    UserProfile:
+      type: object
+      properties:
+        username:
+          type: string
+        moviesCount:
+          type: integer
+        averageRating:
+          type: number
+          nullable: true
+        favoriteGenres:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+        lastSyncedAt:
+          type: string
+          nullable: true
+        favoriteFilms:
+          type: array
+          items:
+            type: object
+            properties:
+              slug:
+                type: string
+              title:
+                type: string
+              year:
+                type: integer
+                nullable: true
+              poster:
+                type: string
+                nullable: true
+              url:
+                type: string
+        recentLikes:
+          type: array
+          items:
+            type: object
+    RatingsSummary:
+      type: object
+      properties:
+        averageRating:
+          type: number
+          nullable: true
+        ratingsCount:
+          type: integer
+        bestMovies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Movie'
+        worstMovies:
+          type: array
+          items:
+            $ref: '#/components/schemas/Movie'
+        distribution:
+          type: object
+          additionalProperties:
+            type: integer
+    Statistics:
+      type: object
+      properties:
+        moviesWatched:
+          type: integer
+        averageRating:
+          type: number
+          nullable: true
+        topGenres:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+        topDirectors:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+        topDecades:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              count:
+                type: integer
+    Recommendations:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              title:
+                type: string
+              reason:
+                type: string
+              score:
+                type: number
+              basedOn:
+                type: array
+                items:
+                  type: string
+              slug:
+                type: string
+                nullable: true
+              year:
+                type: integer
+                nullable: true
+              poster:
+                type: string
+                nullable: true
+    SearchBody:
+      type: object
+      properties:
+        filter:
+          description: Atom (field/op/value) or nested and/or group
+          type: object
+          additionalProperties: true
+        sort:
+          type: string
+          enum:
+            - rating_desc
+            - rating_asc
+            - date_desc
+            - date_asc
+            - year_desc
+            - year_asc
+            - title_asc
+        page:
+          type: integer
+          minimum: 1
+          default: 1
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 20

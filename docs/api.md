@@ -4,7 +4,7 @@ Interactive docs: `GET /docs` (Swagger UI). Spec: `GET /openapi.json`.
 
 ## Authentication
 
-By default the API is open (`AUTH_ENABLED=false`). When `AUTH_ENABLED=true`, every path except those listed in `AUTH_PUBLIC_PATHS` (default: `/health`) requires credentials.
+By default the API is open (`AUTH_ENABLED=false`). When `AUTH_ENABLED=true`, every path except those listed in `AUTH_PUBLIC_PATHS` (default: `/health,/privacy,/openapi-gpt-actions.yaml`) requires credentials.
 
 Configure methods with `AUTH_METHODS` (CSV). Any listed method may succeed:
 
@@ -27,6 +27,17 @@ When auth is enabled, OpenAPI advertises the active security schemes at `/openap
 ```json
 { "status": "ok", "service": "letterboxd-api", "timestamp": "..." }
 ```
+
+### ChatGPT Actions helpers
+
+Public by default (included in `AUTH_PUBLIC_PATHS`):
+
+| Path | Description |
+| --- | --- |
+| `GET /privacy` | Short HTML privacy notice (GPT Builder privacy URL) |
+| `GET /openapi-gpt-actions.yaml` | Curated OpenAPI schema for Custom GPT Actions |
+
+Setup guide: [chatgpt-actions.md](chatgpt-actions.md). Repo copy of the schema: [`chatgpt-actions.yaml`](chatgpt-actions.yaml).
 
 ### Lazy sync
 

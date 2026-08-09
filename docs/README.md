@@ -8,6 +8,7 @@ Letterboxd API — project documentation.
 | --- | --- |
 | [architecture.md](architecture.md) | Clean Architecture, layers, sync flow, extension points |
 | [api.md](api.md) | REST endpoints, query params, error format |
+| [chatgpt-actions.md](chatgpt-actions.md) | Connect the API to ChatGPT Custom GPT Actions |
 | [database.md](database.md) | Prisma models, ER diagram, migrations |
 | [development.md](development.md) | Local setup, scripts, contributing workflow |
 | [roadmap.md](roadmap.md) | v1–v4 product roadmap |

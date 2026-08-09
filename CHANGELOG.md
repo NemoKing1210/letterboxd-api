@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.2.1] - 2026-08-09
+
+### Changed
+
+- Bruno collection: **Privacy Notice** and **OpenAPI GPT Actions Schema** requests; collection docs for Custom GPT Actions
+- Development docs mention the new Bruno helpers
+
+## [3.2.0] - 2026-08-09
+
+### Added
+
+- Curated OpenAPI schema for ChatGPT Custom GPT Actions (`docs/chatgpt-actions.yaml`)
+- Public helpers: `GET /openapi-gpt-actions.yaml`, `GET /privacy`
+- Setup guide: `docs/chatgpt-actions.md` (linked from README)
+
+### Changed
+
+- Default `AUTH_PUBLIC_PATHS` includes `/privacy` and `/openapi-gpt-actions.yaml` (with `/health`)
+
 ## [3.1.1] - 2026-08-09
 
 ### Changed

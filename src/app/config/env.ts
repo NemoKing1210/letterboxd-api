@@ -97,7 +97,10 @@ const envSchema = z
     AUTH_TOKENS: z.string().optional().default(''),
     AUTH_BASIC_USERNAME: z.string().optional().default(''),
     AUTH_BASIC_PASSWORD: z.string().optional().default(''),
-    AUTH_PUBLIC_PATHS: z.string().optional().default('/health'),
+    AUTH_PUBLIC_PATHS: z
+      .string()
+      .optional()
+      .default('/health,/privacy,/openapi-gpt-actions.yaml'),
     OPENAI_API_KEY: z.string().optional().default(''),
     OPENAI_BASE_URL: z.string().optional().default('https://api.openai.com/v1'),
     OPENAI_EMBEDDING_MODEL: z.string().optional().default('text-embedding-3-small'),

@@ -15,7 +15,11 @@ describe('loadEnv auth', () => {
     expect(env.AUTH_ENABLED).toBe(false);
     expect(env.AUTH_METHODS).toEqual(['api_key', 'bearer']);
     expect(env.AUTH_TOKENS).toEqual([]);
-    expect(env.AUTH_PUBLIC_PATHS).toEqual(['/health']);
+    expect(env.AUTH_PUBLIC_PATHS).toEqual([
+      '/health',
+      '/privacy',
+      '/openapi-gpt-actions.yaml',
+    ]);
   });
 
   it('parses AUTH_ENABLED and AUTH_TOKENS when enabled', () => {
