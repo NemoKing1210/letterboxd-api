@@ -31,6 +31,11 @@ describe('SynchronizationService', () => {
     ];
 
     const getFilmDetails = vi.fn();
+    let moviesStarted = false;
+    let diaryStarted = false;
+    let moviesSawDiaryStarted = false;
+    let diarySawMoviesStarted = false;
+
     const provider: MovieProvider = {
       getProfile: async (): Promise<LetterboxdProfile> => ({
         username: 'demo',
@@ -38,15 +43,25 @@ describe('SynchronizationService', () => {
         filmsCount: 1,
         bio: null,
       }),
-      getMovies: async () => films,
+      getMovies: async () => {
+        moviesStarted = true;
+        moviesSawDiaryStarted = diaryStarted;
+        await Promise.resolve();
+        return films;
+      },
       getRatings: async () => [],
-      getDiary: async () => [
-        {
-          ...films[0]!,
-          watchedDate: '2024-06-01T00:00:00.000Z',
-          review: null,
-        },
-      ],
+      getDiary: async () => {
+        diaryStarted = true;
+        diarySawMoviesStarted = moviesStarted;
+        await Promise.resolve();
+        return [
+          {
+            ...films[0]!,
+            watchedDate: '2024-06-01T00:00:00.000Z',
+            review: null,
+          },
+        ];
+      },
       getWatchlist: async () => [],
       getFilmDetails,
     };
@@ -131,6 +146,7 @@ describe('SynchronizationService', () => {
     expect(result.status).toBe('SUCCESS');
     expect(result.moviesSynced).toBe(1);
     expect(getFilmDetails).not.toHaveBeenCalled();
+    expect(moviesSawDiaryStarted || diarySawMoviesStarted).toBe(true);
     expect(upsertBySlug).toHaveBeenCalledWith({
       slug: 'inception',
       title: 'Inception',

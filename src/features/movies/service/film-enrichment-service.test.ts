@@ -146,4 +146,63 @@ describe('FilmEnrichmentService', () => {
 
     expect(getFilmDetails).not.toHaveBeenCalled();
   });
+
+  it('retries transient enrichment failures then succeeds', async () => {
+    const pending = movie({ id: 'm1', slug: 'inception', title: 'Inception', year: 2010 });
+    const enrichedRow = movie({
+      id: 'm1',
+      slug: 'inception',
+      title: 'Inception',
+      year: 2010,
+      enriched: true,
+      genres: ['sci-fi'],
+      director: 'Christopher Nolan',
+      poster: 'https://a.ltrbxd.com/inception.jpg',
+    });
+
+    const getFilmDetails = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('timeout'))
+      .mockResolvedValueOnce({
+        slug: 'inception',
+        title: 'Inception',
+        year: 2010,
+        poster: 'https://a.ltrbxd.com/inception.jpg',
+        genres: ['sci-fi'],
+        director: 'Christopher Nolan',
+      });
+
+    const service = new FilmEnrichmentService({
+      movieProvider: {
+        getProfile: vi.fn(),
+        getMovies: vi.fn(),
+        getRatings: vi.fn(),
+        getDiary: vi.fn(),
+        getWatchlist: vi.fn(),
+        getFilmDetails,
+      },
+      movies: {
+        findBySlugs: vi.fn(),
+        upsertBySlug: vi.fn(async () => enrichedRow),
+      },
+      logger: createLogger(),
+      concurrency: 1,
+      maxAttempts: 3,
+    });
+
+    const result = await service.enrichEntries([
+      {
+        id: 'um1',
+        userId: 'u1',
+        movieId: pending.id,
+        rating: 5,
+        favorite: false,
+        watchedDate: null,
+        movie: pending,
+      },
+    ]);
+
+    expect(getFilmDetails).toHaveBeenCalledTimes(2);
+    expect(result[0]?.movie.enriched).toBe(true);
+  });
 });

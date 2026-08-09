@@ -38,8 +38,10 @@ export class SynchronizationService {
 
     try {
       await this.deps.movieProvider.getProfile(normalized);
-      const films = await this.deps.movieProvider.getMovies(normalized);
-      const watchedBySlug = await this.loadWatchedDates(normalized);
+      const [films, watchedBySlug] = await Promise.all([
+        this.deps.movieProvider.getMovies(normalized),
+        this.loadWatchedDates(normalized),
+      ]);
 
       const user = await this.deps.users.upsertByUsername(normalized);
       let moviesSynced = 0;

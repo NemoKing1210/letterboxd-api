@@ -100,7 +100,8 @@ bun run dev
 | `LETTERBOXD_TIMEOUT` | Scraper HTTP timeout (ms) |
 | `LETTERBOXD_PAGE_DELAY_MS` | Delay between scrape list pages |
 | `LETTERBOXD_MAX_PAGES` | Max pages per list scrape |
-| `LETTERBOXD_ENRICH_CONCURRENCY` | Parallel on-demand film-page enrichments when serving responses |
+| `LETTERBOXD_ENRICH_CONCURRENCY` | Parallel on-demand film-page enrichments when serving responses (default 8) |
+| `LETTERBOXD_ENRICH_RETRIES` | Retries per film during on-demand enrichment (default 3) |
 | `CACHE_TTL` | In-memory cache TTL (seconds) |
 | `RATE_LIMIT_*` | Per-IP rate limiting |
 | `CORS_ORIGIN` | Allowed origins (`*` or CSV) |

@@ -1,14 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import {
   average,
+  backoffDelayMs,
   decadeFromYear,
   extractYearFromTitle,
   filmPageUrl,
   isPlaceholderPoster,
+  isRetryableExternalError,
   mapWithConcurrency,
   normalizeUsername,
   topN,
+  withRetry,
 } from './index';
+import { ExternalServiceError, NotFoundError } from '../errors/app-error';
 
 describe('shared utils', () => {
   it('normalizes usernames', () => {
@@ -57,5 +61,48 @@ describe('shared utils', () => {
   it('maps with concurrency', async () => {
     const out = await mapWithConcurrency([1, 2, 3, 4], 2, async (n) => n * 2);
     expect(out).toEqual([2, 4, 6, 8]);
+  });
+
+  it('computes jittered backoff within exponential cap', () => {
+    expect(backoffDelayMs(0, { baseMs: 100, maxMs: 1000, random: () => 0 })).toBe(0);
+    expect(backoffDelayMs(0, { baseMs: 100, maxMs: 1000, random: () => 0.999 })).toBe(99);
+    expect(backoffDelayMs(3, { baseMs: 100, maxMs: 500, random: () => 1 })).toBe(500);
+  });
+
+  it('withRetry succeeds after transient failures', async () => {
+    let calls = 0;
+    const result = await withRetry(
+      async () => {
+        calls += 1;
+        if (calls < 3) {
+          throw new ExternalServiceError('transient', { status: 503 });
+        }
+        return 'ok';
+      },
+      { maxAttempts: 3, baseMs: 1, maxMs: 1, random: () => 0 },
+    );
+    expect(result).toBe('ok');
+    expect(calls).toBe(3);
+  });
+
+  it('withRetry does not retry NotFoundError', async () => {
+    let calls = 0;
+    await expect(
+      withRetry(
+        async () => {
+          calls += 1;
+          throw new NotFoundError('missing');
+        },
+        { maxAttempts: 3, baseMs: 1, maxMs: 1, random: () => 0 },
+      ),
+    ).rejects.toBeInstanceOf(NotFoundError);
+    expect(calls).toBe(1);
+  });
+
+  it('classifies retryable external errors', () => {
+    expect(isRetryableExternalError(new ExternalServiceError('x', { status: 429 }))).toBe(true);
+    expect(isRetryableExternalError(new ExternalServiceError('x', { status: 503 }))).toBe(true);
+    expect(isRetryableExternalError(new ExternalServiceError('x', { status: 404 }))).toBe(false);
+    expect(isRetryableExternalError(new NotFoundError())).toBe(false);
   });
 });

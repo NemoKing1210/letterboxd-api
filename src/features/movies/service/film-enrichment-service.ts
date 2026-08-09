@@ -2,9 +2,17 @@ import type { Movie, UserMovie } from '@prisma/client';
 import type { MovieRepository } from '../../../infrastructure/database';
 import type { MovieProvider } from '../../../infrastructure/letterboxd';
 import type { AppLogger } from '../../../infrastructure/logger';
-import { DEFAULT_ENRICH_CONCURRENCY } from '../../../shared/constants';
+import {
+  DEFAULT_ENRICH_CONCURRENCY,
+  DEFAULT_ENRICH_RETRIES,
+} from '../../../shared/constants';
 import { NotFoundError } from '../../../shared/errors/app-error';
-import { isPlaceholderPoster, mapWithConcurrency } from '../../../shared/utils';
+import {
+  isPlaceholderPoster,
+  isRetryableExternalError,
+  mapWithConcurrency,
+  withRetry,
+} from '../../../shared/utils';
 import { realPoster } from '../../synchronization/service/merge-film-metadata';
 
 export type UserMovieWithFilm = UserMovie & { movie: Movie };
@@ -14,6 +22,7 @@ export type FilmEnrichmentServiceDeps = {
   movies: MovieRepository;
   logger: AppLogger;
   concurrency?: number;
+  maxAttempts?: number;
 };
 
 /**
@@ -22,9 +31,11 @@ export type FilmEnrichmentServiceDeps = {
  */
 export class FilmEnrichmentService {
   private readonly concurrency: number;
+  private readonly maxAttempts: number;
 
   constructor(private readonly deps: FilmEnrichmentServiceDeps) {
     this.concurrency = deps.concurrency ?? DEFAULT_ENRICH_CONCURRENCY;
+    this.maxAttempts = deps.maxAttempts ?? DEFAULT_ENRICH_RETRIES;
   }
 
   async enrichEntries(entries: UserMovieWithFilm[]): Promise<UserMovieWithFilm[]> {
@@ -62,17 +73,15 @@ export class FilmEnrichmentService {
     }
 
     try {
-      const details = await this.deps.movieProvider.getFilmDetails(slug);
-      const poster = realPoster(details.poster) ?? realPoster(movie.poster);
-
-      return await this.deps.movies.upsertBySlug({
-        slug,
-        title: details.title || movie.title,
-        year: details.year ?? movie.year,
-        poster,
-        genres: details.genres.length > 0 ? details.genres : movie.genres,
-        director: details.director ?? movie.director,
-        enriched: true,
+      return await withRetry(() => this.fetchAndPersist(movie, slug), {
+        maxAttempts: this.maxAttempts,
+        isRetryable: isRetryableExternalError,
+        onRetry: (error, attempt, delayMs) => {
+          this.deps.logger.warn(
+            { err: error, slug, movieId: movie.id, attempt, delayMs, maxAttempts: this.maxAttempts },
+            'Retrying on-demand film enrichment',
+          );
+        },
       });
     } catch (error) {
       if (error instanceof NotFoundError) {
@@ -81,11 +90,26 @@ export class FilmEnrichmentService {
       }
 
       this.deps.logger.warn(
-        { err: error, slug, movieId: movie.id },
-        'On-demand film enrichment failed; will retry on a later request',
+        { err: error, slug, movieId: movie.id, attempts: this.maxAttempts },
+        'On-demand film enrichment failed after retries; will retry on a later request',
       );
       return movie;
     }
+  }
+
+  private async fetchAndPersist(movie: Movie, slug: string): Promise<Movie> {
+    const details = await this.deps.movieProvider.getFilmDetails(slug);
+    const poster = realPoster(details.poster) ?? realPoster(movie.poster);
+
+    return this.deps.movies.upsertBySlug({
+      slug,
+      title: details.title || movie.title,
+      year: details.year ?? movie.year,
+      poster,
+      genres: details.genres.length > 0 ? details.genres : movie.genres,
+      director: details.director ?? movie.director,
+      enriched: true,
+    });
   }
 
   private markEnriched(movie: Movie): Promise<Movie> {

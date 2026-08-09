@@ -9,7 +9,10 @@ export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 50;
 /** Hard cap for any paginated / list movie payload in the API. */
 export const MAX_LIMIT = 100;
-export const DEFAULT_ENRICH_CONCURRENCY = 4;
+export const DEFAULT_ENRICH_CONCURRENCY = 8;
+export const DEFAULT_ENRICH_RETRIES = 3;
+export const DEFAULT_RETRY_BASE_MS = 250;
+export const DEFAULT_RETRY_MAX_MS = 8_000;
 
 export const LETTERBOXD_BASE_URL = 'https://letterboxd.com';
 

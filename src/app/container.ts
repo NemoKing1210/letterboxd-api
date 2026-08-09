@@ -78,6 +78,7 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
     movies,
     logger,
     concurrency: env.LETTERBOXD_ENRICH_CONCURRENCY,
+    maxAttempts: env.LETTERBOXD_ENRICH_RETRIES,
   });
 
   const syncService =

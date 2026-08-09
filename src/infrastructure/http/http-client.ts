@@ -1,6 +1,6 @@
 import { resolveProxyUrl, type ProxyEnvParts } from '../../app/config/proxy-url';
 import { ExternalServiceError } from '../../shared/errors/app-error';
-import { sleep } from '../../shared/utils';
+import { backoffDelayMs, sleep } from '../../shared/utils';
 
 export const DEFAULT_SCRAPER_USER_AGENT =
   'LetterboxdAPI/1.0 (+https://github.com/letterboxd-api; personal use)';
@@ -75,7 +75,7 @@ export class HttpClient {
           lastError = new ExternalServiceError(`Cloudflare challenge for ${url}`, {
             status: response.status,
           });
-          await sleep(250 * 2 ** attempt);
+          await sleep(backoffDelayMs(attempt));
           continue;
         }
 
@@ -83,7 +83,7 @@ export class HttpClient {
           lastError = new ExternalServiceError(`Transient HTTP ${response.status} for ${url}`, {
             status: response.status,
           });
-          await sleep(250 * 2 ** attempt);
+          await sleep(backoffDelayMs(attempt));
           continue;
         }
 
@@ -104,7 +104,7 @@ export class HttpClient {
         }
         lastError = error;
         if (attempt < this.maxRetries - 1) {
-          await sleep(250 * 2 ** attempt);
+          await sleep(backoffDelayMs(attempt));
         }
       } finally {
         clearTimeout(timer);
