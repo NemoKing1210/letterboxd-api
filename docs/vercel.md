@@ -122,7 +122,7 @@ bun run vercel:env
 
 | Name           | Example / notes                                                                                                                                                                                               |
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DATABASE_URL` | Supabase **transaction pooler** (Supavisor port **6543**) for serverless — see [supabase.md](supabase.md#connection-strings). Include `?schema=public&pgbouncer=true` so Prisma disables prepared statements. |
+| `DATABASE_URL` | Supabase **transaction pooler** (Supavisor port **6543**) for serverless — see [supabase.md](supabase.md#connection-strings). Include `?schema=public&pgbouncer=true&connection_limit=1` (Prisma disables prepared statements; low limit for serverless). App also auto-appends these for `:6543` if missing. |
 | `NODE_ENV`     | `production`                                                                                                                                                                                                  |
 
 You can use discrete `DB_*` instead of `DATABASE_URL`, but a single URL is simpler on Vercel.
@@ -240,6 +240,7 @@ Use:
 | `vercel build` / Prisma client missing | `buildCommand` runs `bunx prisma generate`; `postinstall` also generates the client                                                                               |
 | `env: 'node': No such file or directory` on `prisma generate` | Use `bunx prisma generate` (not bare `prisma`) — Bun Vercel images often lack `node` in PATH                                                                     |
 | `No Output Directory named "public"`   | API-only deploy still needs `outputDirectory: "public"` + empty `public/` after a custom buildCommand; traffic is rewritten to `/api`                            |
+| `prepared statement "s…" already exists` / pool timeout | `DATABASE_URL` must use transaction `:6543` with `pgbouncer=true` (and preferably `connection_limit=1`). Redeploy after fixing the env var.                      |
 
 ## Related docs
 

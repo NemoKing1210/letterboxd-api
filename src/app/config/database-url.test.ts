@@ -1,6 +1,29 @@
 import { describe, expect, it } from 'vitest';
-import { buildDatabaseUrl } from './database-url';
+import { buildDatabaseUrl, normalizeDatabaseUrl } from './database-url';
 import { loadEnv, resetEnvCache } from './env';
+
+describe('normalizeDatabaseUrl', () => {
+  it('adds pgbouncer, schema, and connection_limit for transaction pooler :6543', () => {
+    expect(
+      normalizeDatabaseUrl(
+        'postgresql://postgres.ref:pass@aws-1-eu-west-1.pooler.supabase.com:6543/postgres',
+      ),
+    ).toBe(
+      'postgresql://postgres.ref:pass@aws-1-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&schema=public&connection_limit=1',
+    );
+  });
+
+  it('does not override existing pooler query params', () => {
+    const url =
+      'postgresql://u:p@host:6543/postgres?pgbouncer=true&schema=public&connection_limit=3';
+    expect(normalizeDatabaseUrl(url)).toBe(url);
+  });
+
+  it('leaves non-pooler URLs unchanged', () => {
+    const url = 'postgresql://a:b@host:5432/db?schema=public';
+    expect(normalizeDatabaseUrl(url)).toBe(url);
+  });
+});
 
 describe('buildDatabaseUrl', () => {
   it('prefers explicit DATABASE_URL', () => {
