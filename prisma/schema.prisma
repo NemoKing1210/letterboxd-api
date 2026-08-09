@@ -15,38 +15,59 @@ enum SyncStatus {
 }
 
 model User {
-  id              String        @id @default(cuid())
-  username        String        @unique
+  id              String              @id @default(cuid())
+  username        String              @unique
   followingCount  Int?
   followersCount  Int?
   /// Snapshot from Letterboxd profile: [{ label, url }]
-  externalLinks   Json          @default("[]")
+  externalLinks   Json                @default("[]")
   /// Pinned favorite films on profile: [{ slug, title, year, poster }]
-  favoriteFilms   Json          @default("[]")
+  favoriteFilms   Json                @default("[]")
   /// Recent likes on profile: [{ slug, title, year, poster }]
-  recentLikes     Json          @default("[]")
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  recentLikes     Json                @default("[]")
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
   movies          UserMovie[]
   syncs           SyncHistory[]
+  tasteEmbedding  UserTasteEmbedding?
 }
 
 model Movie {
-  id        String      @id @default(cuid())
+  id        String          @id @default(cuid())
   title     String
   year      Int?
   tmdbId    Int?
   poster    String?
-  genres    String[]    @default([])
+  genres    String[]        @default([])
   director  String?
-  slug      String?     @unique
+  slug      String?         @unique
   /// Internal: film-page metadata has been fetched (not exposed in API)
-  enriched  Boolean     @default(false)
+  enriched  Boolean         @default(false)
   users     UserMovie[]
+  embedding MovieEmbedding?
 
   @@index([year])
   @@index([director])
   @@index([enriched])
+}
+
+/// Movie text embedding (pgvector). Read/write via EmbeddingRepository raw SQL.
+model MovieEmbedding {
+  movieId   String                     @id
+  movie     Movie                      @relation(fields: [movieId], references: [id], onDelete: Cascade)
+  embedding Unsupported("vector(1536)")
+  model     String
+  updatedAt DateTime                   @updatedAt
+}
+
+/// Aggregated user taste vector derived from highly rated / favorite films.
+model UserTasteEmbedding {
+  userId     String                     @id
+  user       User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  embedding  Unsupported("vector(1536)")
+  model      String
+  sourceHash String
+  updatedAt  DateTime                   @updatedAt
 }
 
 model UserMovie {

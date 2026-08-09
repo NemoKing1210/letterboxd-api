@@ -3,7 +3,28 @@ export const CACHE_KEYS = {
   userStats: (username: string) => `user:stats:${username.toLowerCase()}`,
   userRatings: (username: string) => `user:ratings:v2:${username.toLowerCase()}`,
   userFavoriteFacets: (username: string) => `user:favorites:facets:v1:${username.toLowerCase()}`,
+  userRecommendations: (username: string, limit: number) =>
+    `user:recommendations:v1:${username.toLowerCase()}:${limit}`,
+  userRecommendationsPrefix: (username: string) =>
+    `user:recommendations:v1:${username.toLowerCase()}:`,
 } as const;
+
+/** text-embedding-3-small default output size (also forced via API `dimensions`). */
+export const OPENAI_EMBEDDING_DIMENSIONS = 1536;
+export const DEFAULT_OPENAI_EMBEDDING_MODEL = 'text-embedding-3-small';
+export const DEFAULT_OPENAI_CHAT_MODEL = 'gpt-4o-mini';
+export const DEFAULT_OPENAI_TIMEOUT_MS = 30_000;
+export const DEFAULT_OPENAI_MAX_RETRIES = 3;
+/** Max movies to embed lazily per recommendations request. */
+export const DEFAULT_AI_EMBED_BUDGET = 48;
+export const DEFAULT_AI_EMBED_BATCH_SIZE = 16;
+/** ANN candidates fetched before optional LLM rerank. */
+export const DEFAULT_AI_CANDIDATE_POOL = 20;
+/** Min rating (inclusive) to count toward taste embedding. */
+export const TASTE_RATING_THRESHOLD = 4;
+/** Extra weight for favorited films when averaging taste. */
+export const TASTE_FAVORITE_BOOST = 1.5;
+export const TASTE_MAX_ANCHORS = 40;
 
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 20;

@@ -13,7 +13,13 @@ params:query {
 }
 
 docs {
-  Rule-based recommendations stub (`limit` 1–20, default 5).
+  Personalized recommendations (`limit` 1–20, default 5).
+
+  With `OPENAI_API_KEY` on the server: taste embeddings + pgvector ANN (+ optional LLM reasons).
+  Without a key (or on AI failure): rule-based fallback (directors / genres).
+
+  AI items may include optional `slug`, `movieId`, `year`, `poster`.
+  First call can be slower while embeddings are filled lazily — sync the user first.
 }
 
 tests {
@@ -23,5 +29,15 @@ tests {
 
   test("items is an array", function() {
     expect(res.body.items).to.be.an("array");
+  });
+
+  test("each item has recommendation fields", function() {
+    const items = res.body.items || [];
+    items.forEach(function(item) {
+      expect(item).to.have.property("title");
+      expect(item).to.have.property("reason");
+      expect(item).to.have.property("score");
+      expect(item).to.have.property("basedOn");
+    });
   });
 }

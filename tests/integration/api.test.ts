@@ -39,6 +39,17 @@ function createTestEnv(overrides: Partial<Env> = {}): Env {
     AUTH_BASIC_USERNAME: '',
     AUTH_BASIC_PASSWORD: '',
     AUTH_PUBLIC_PATHS: ['/health'],
+    OPENAI_API_KEY: '',
+    OPENAI_BASE_URL: 'https://api.openai.com/v1',
+    OPENAI_EMBEDDING_MODEL: 'text-embedding-3-small',
+    OPENAI_CHAT_MODEL: 'gpt-4o-mini',
+    OPENAI_TIMEOUT_MS: 30_000,
+    OPENAI_MAX_RETRIES: 3,
+    RECOMMENDATION_ENGINE: 'rules',
+    AI_RECOMMEND_CANDIDATE_POOL: 20,
+    AI_EMBED_BUDGET: 48,
+    AI_EMBED_BATCH_SIZE: 16,
+    AI_RECOMMEND_USE_LLM: true,
     ...overrides,
   };
 }

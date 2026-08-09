@@ -19,9 +19,9 @@
 
 ## v3 — AI recommendations
 
-- [ ] OpenAI integration
-- [ ] Taste embeddings
-- [ ] pgvector storage
+- [x] OpenAI integration
+- [x] Taste embeddings
+- [x] pgvector storage
 - [ ] RAG over watch history + reviews
 
 ## v4 — Personal AI Movie Assistant

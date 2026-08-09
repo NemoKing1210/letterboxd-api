@@ -72,6 +72,10 @@ const RecommendationsSchema = z.object({
       reason: z.string(),
       score: z.number(),
       basedOn: z.array(z.string()),
+      slug: z.string().nullable().optional(),
+      movieId: z.string().optional(),
+      year: z.number().int().nullable().optional(),
+      poster: z.string().nullable().optional(),
     }),
   ),
 });
@@ -392,7 +396,7 @@ export function createApp(container: AppContainer) {
     method: 'get',
     path: '/api/users/{username}/recommendations',
     tags: ['Recommendations'],
-    summary: 'Get rule-based recommendations (AI-ready stub)',
+    summary: 'Get personalized film recommendations',
     request: {
       params: usernameParamSchema,
       query: z.object({
@@ -442,9 +446,9 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '3.0.0',
+      version: '3.1.1',
       description:
-        'Analyze Letterboxd film taste: sync, filter, search, statistics, and AI-ready recommendations.',
+        'Analyze Letterboxd film taste: sync, filter, search, statistics, and AI recommendations (embeddings + optional LLM).',
     },
     servers: [{ url: '/' }],
     ...(container.authenticator.enabled

@@ -19,7 +19,7 @@ Enrich films via TMDB (posters, genres, directors, cast).
 
 ## v3
 
-OpenAI + embeddings + pgvector RAG for personalized recommendations.
+OpenAI embeddings + pgvector ANN (+ optional LLM reasons). Full review-corpus RAG still pending.
 
 ## v4
 

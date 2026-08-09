@@ -1,7 +1,9 @@
 /**
- * Placeholder for future TMDB / OpenAI adapters.
- * Keep external integrations behind interfaces in infrastructure/external.
+ * External adapters (TMDB, OpenAI, …) live under infrastructure/external.
+ * Features depend on ports; wire concretes in app/container.ts.
  */
-export type ExternalAdapter = {
-  name: string;
-};
+export {
+  OpenAiHttpClient,
+  OpenAiEmbeddingProvider,
+  OpenAiLlmProvider,
+} from './openai';

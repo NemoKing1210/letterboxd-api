@@ -6,6 +6,11 @@ export {
   PrismaUserMovieRepository,
   PrismaSyncHistoryRepository,
 } from './repositories';
+export {
+  PrismaEmbeddingRepository,
+  toVectorLiteral,
+  parseVectorText,
+} from './embedding-repository';
 export type {
   UserProfileSnapshot,
   UserRepository,
@@ -17,3 +22,8 @@ export type {
   MovieListSort,
   MovieSearchQuery,
 } from './repositories';
+export type {
+  EmbeddingRepository,
+  StoredEmbedding,
+  NearestMovieHit,
+} from './embedding-repository';

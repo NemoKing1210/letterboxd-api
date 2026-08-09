@@ -186,7 +186,9 @@ Forces a Letterboxd list + diary scrape and upserts local rows. Film genres/dire
 
 `GET /api/users/:username/recommendations?limit=5`
 
-Rule-based stub implementing `RecommendationEngine` for future AI swap.
+Personalized recommendations when `OPENAI_API_KEY` is set (taste embeddings + pgvector ANN, optional LLM reasons). Without a key (or on AI failure), falls back to the rule-based engine.
+
+Response items may include optional `slug`, `movieId`, `year`, and `poster` when the AI path returns catalog films.
 
 ## Errors
 

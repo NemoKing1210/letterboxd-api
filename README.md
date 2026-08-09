@@ -1,6 +1,6 @@
 # Letterboxd API
 
-Production-ready API for analyzing Letterboxd film taste: sync user data, filter movies, compute statistics, and prepare for AI recommendations.
+Production-ready API for analyzing Letterboxd film taste: sync user data, filter movies, compute statistics, and personalized AI recommendations (when OpenAI is configured).
 
 > **Disclaimer:** Letterboxd does not provide a public API. This project uses an unofficial HTML scraper for personal/educational use. Respect Letterboxd Terms of Service and rate limits. Scrapers may break when Letterboxd changes markup.
 
@@ -11,7 +11,7 @@ Production-ready API for analyzing Letterboxd film taste: sync user data, filter
 - Movies API with rating / year / genre / director filters, title search (`q`/`search`), sorting, pagination
 - Advanced `POST /search` filter DSL for nested queries
 - Ratings, favorites, and statistics endpoints
-- Rule-based recommendation stub (AI-ready interface)
+- Personalized recommendations (OpenAI embeddings + pgvector when configured; rule-based fallback)
 - OpenAPI + Swagger UI at `/docs`
 - Clean Architecture + feature modules
 - Memory cache with Redis-ready interface
@@ -143,7 +143,7 @@ Do not pass tokens in query strings (they leak into logs and proxies).
 | `GET` | `/api/users/:username/favorites/years` | Favorite years |
 | `POST` | `/api/users/:username/search` | Advanced nested filter search |
 | `GET` | `/api/users/:username/statistics` | Statistics |
-| `GET` | `/api/users/:username/recommendations` | Rule-based recommendations |
+| `GET` | `/api/users/:username/recommendations` | Personalized recommendations (AI when configured) |
 | `POST` | `/api/users/:username/sync` | Force Letterboxd sync |
 
 User-scoped `GET` endpoints auto-sync from Letterboxd when the user is missing locally, or when the last successful sync is older than `USER_SYNC_TTL_SECONDS` (default 12h; set `0` to disable stale refresh). First sync / refresh may be slow. Sync imports the films list (year from titles, no placeholder posters) and diary watched dates. Genres, directors, and real posters are enriched on demand for movies returned by the API (tracked by internal `Movie.enriched`). List endpoints default `limit` to 20 (max 100); omitting `limit` still caps the page size. Movie responses include a Letterboxd `url`.

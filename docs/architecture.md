@@ -63,7 +63,7 @@ sequenceDiagram
 | --- | --- | --- |
 | `MovieProvider` | `LetterboxdScraperProvider` | Official API if ever available |
 | `CacheProvider` | `MemoryCache` | Redis / Upstash / Vercel KV |
-| `RecommendationEngine` | `RuleBasedRecommendationEngine` | OpenAI + pgvector RAG |
+| `RecommendationEngine` | `RuleBasedRecommendationEngine` / `AiRecommendationEngine` (+ fallback) | Full RAG corpus over reviews |
 
 ## Serverless notes
 

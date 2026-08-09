@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2026-08-09
+
+### Changed
+
+- Bruno collection docs/tests for personalized recommendations (AI when configured)
+- README / AGENTS / development notes aligned with shipped OpenAI + pgvector recommendations
+
+## [3.1.0] - 2026-08-09
+
+### Added
+
+- OpenAI integration behind `EmbeddingProvider` / `LlmProvider` ports (`infrastructure/external/openai`)
+- pgvector storage for `MovieEmbedding` and `UserTasteEmbedding` with ANN retrieval
+- `AiRecommendationEngine` (taste embeddings + optional LLM reasons) with rule-based fallback when the key is missing or AI fails
+- Env: `OPENAI_*`, `RECOMMENDATION_ENGINE`, `AI_RECOMMEND_*` (see `.env.example`)
+- Optional recommendation fields: `slug`, `movieId`, `year`, `poster`
+
+### Changed
+
+- `GET /api/users/:username/recommendations` uses AI when configured; otherwise unchanged rule-based behavior
+- Successful sync invalidates recommendation cache and may refresh embeddings in the background
+
 ## [3.0.0] - 2026-08-09
 
 ### Removed

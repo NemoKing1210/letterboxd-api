@@ -26,7 +26,8 @@ export type RuleBasedRecommendationEngineDeps = {
 };
 
 /**
- * Rule-based stub. Replace with OpenAI / embeddings / RAG in v3 without changing callers.
+ * Rule-based recommendations (directors / genres from highly rated films).
+ * Used as the default without OpenAI and as fallback when AI fails.
  */
 export class RuleBasedRecommendationEngine implements RecommendationEngine {
   constructor(private readonly deps: RuleBasedRecommendationEngineDeps) {}

@@ -41,6 +41,22 @@ const booleanish = z
     return normalized === '1' || normalized === 'true' || normalized === 'yes';
   });
 
+/** Same as booleanish but defaults to true when unset. */
+const booleanishDefaultTrue = z
+  .union([z.boolean(), z.string()])
+  .optional()
+  .default(true)
+  .transform((value) => {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    const normalized = value.trim().toLowerCase();
+    if (normalized === '0' || normalized === 'false' || normalized === 'no') {
+      return false;
+    }
+    return true;
+  });
+
 function parseCsv(value: string): string[] {
   return value
     .split(',')
@@ -82,6 +98,17 @@ const envSchema = z
     AUTH_BASIC_USERNAME: z.string().optional().default(''),
     AUTH_BASIC_PASSWORD: z.string().optional().default(''),
     AUTH_PUBLIC_PATHS: z.string().optional().default('/health'),
+    OPENAI_API_KEY: z.string().optional().default(''),
+    OPENAI_BASE_URL: z.string().optional().default('https://api.openai.com/v1'),
+    OPENAI_EMBEDDING_MODEL: z.string().optional().default('text-embedding-3-small'),
+    OPENAI_CHAT_MODEL: z.string().optional().default('gpt-4o-mini'),
+    OPENAI_TIMEOUT_MS: z.coerce.number().int().positive().default(30_000),
+    OPENAI_MAX_RETRIES: z.coerce.number().int().positive().default(3),
+    RECOMMENDATION_ENGINE: z.enum(['auto', 'ai', 'rules']).default('auto'),
+    AI_RECOMMEND_CANDIDATE_POOL: z.coerce.number().int().positive().default(20),
+    AI_EMBED_BUDGET: z.coerce.number().int().positive().default(48),
+    AI_EMBED_BATCH_SIZE: z.coerce.number().int().positive().default(16),
+    AI_RECOMMEND_USE_LLM: booleanishDefaultTrue,
   })
   .superRefine((data, ctx) => {
     const hasUrl = Boolean(data.DATABASE_URL?.trim());
@@ -102,6 +129,14 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         message: `Invalid AUTH_METHODS: ${invalid.join(', ')}. Allowed: ${AUTH_METHODS.join(', ')}`,
         path: ['AUTH_METHODS'],
+      });
+    }
+
+    if (data.RECOMMENDATION_ENGINE === 'ai' && !data.OPENAI_API_KEY.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'OPENAI_API_KEY is required when RECOMMENDATION_ENGINE=ai',
+        path: ['OPENAI_API_KEY'],
       });
     }
 
@@ -179,6 +214,8 @@ const envSchema = z
       AUTH_BASIC_USERNAME: data.AUTH_BASIC_USERNAME.trim(),
       AUTH_BASIC_PASSWORD: data.AUTH_BASIC_PASSWORD.trim(),
       AUTH_PUBLIC_PATHS: parseCsv(data.AUTH_PUBLIC_PATHS),
+      OPENAI_API_KEY: data.OPENAI_API_KEY.trim(),
+      OPENAI_BASE_URL: data.OPENAI_BASE_URL.trim() || 'https://api.openai.com/v1',
     };
   });
 

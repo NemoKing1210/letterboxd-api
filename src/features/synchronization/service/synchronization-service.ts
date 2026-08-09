@@ -22,6 +22,8 @@ export type SynchronizationServiceDeps = {
   syncHistory: SyncHistoryRepository;
   cache: CacheProvider;
   logger: AppLogger;
+  /** Optional post-success hook (e.g. lazy embedding refresh). Must not throw into sync. */
+  onSyncSuccess?: (ctx: { username: string; userId: string }) => void | Promise<void>;
 };
 
 export class SynchronizationService {
@@ -106,6 +108,17 @@ export class SynchronizationService {
 
       await this.invalidateUserCache(normalized);
 
+      if (this.deps.onSyncSuccess) {
+        void Promise.resolve(
+          this.deps.onSyncSuccess({ username: normalized, userId: user.id }),
+        ).catch((error) => {
+          this.deps.logger.warn(
+            { err: error, username: normalized },
+            'onSyncSuccess hook failed',
+          );
+        });
+      }
+
       this.deps.logger.info(
         { username: normalized, syncId: sync.id, moviesSynced },
         'Synchronization completed',
@@ -159,6 +172,7 @@ export class SynchronizationService {
       this.deps.cache.delete(CACHE_KEYS.userStats(username)),
       this.deps.cache.delete(CACHE_KEYS.userRatings(username)),
       this.deps.cache.delete(CACHE_KEYS.userFavoriteFacets(username)),
+      this.deps.cache.deleteByPrefix(CACHE_KEYS.userRecommendationsPrefix(username)),
     ]);
   }
 }

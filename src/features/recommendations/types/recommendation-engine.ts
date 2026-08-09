@@ -7,6 +7,10 @@ export type Recommendation = {
   reason: string;
   score: number;
   basedOn: string[];
+  slug?: string | null;
+  movieId?: string;
+  year?: number | null;
+  poster?: string | null;
 };
 
 export interface RecommendationEngine {

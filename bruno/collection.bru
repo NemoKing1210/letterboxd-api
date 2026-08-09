@@ -21,7 +21,8 @@ vars:pre-request {
 docs {
   # Letterboxd API
   
-  Sync Letterboxd data, filter movies, and inspect ratings / favorites / statistics.
+  Sync Letterboxd data, filter movies, inspect ratings / favorites / statistics,
+  and get personalized recommendations (OpenAI when configured).
   
   ## Setup
   
@@ -41,6 +42,11 @@ docs {
   - **List Favorite Directors / Genres / Years** — paginated `{ name, count }` facets
   
   List endpoints default `limit` to 20 (max 100).
+
+  ## Recommendations
+  
+  - **Get Recommendations** — AI path when the server has `OPENAI_API_KEY` + pgvector;
+    otherwise rule-based fallback. Optional fields: `slug`, `movieId`, `year`, `poster`.
   
   Interactive docs: `{{baseUrl}}/docs`
 }

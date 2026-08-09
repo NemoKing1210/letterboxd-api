@@ -62,3 +62,5 @@ Husky runs lint-staged on pre-commit.
 ## Bruno
 
 Open the [`bruno/`](../bruno/) folder in [Bruno](https://www.usebruno.com/). Select the **Local** environment, set `username`, then run **Sync User** (or **Get User Profile** for lazy sync) before hitting derived endpoints.
+
+**Get Recommendations** uses OpenAI when the API process has `OPENAI_API_KEY` and Postgres has pgvector (`bun run db:migrate`). Without a key it returns the rule-based fallback — no Bruno env vars are required for OpenAI (keys stay in server `.env`).
