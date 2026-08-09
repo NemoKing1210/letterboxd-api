@@ -56,7 +56,9 @@ Setup guide: [chatgpt-actions.md](chatgpt-actions.md). Repo copy of the schema: 
 
 ### Lazy sync
 
-All user-scoped `GET` endpoints below auto-sync from Letterboxd when the username is not in the local database yet, or when the last successful sync is older than `USER_SYNC_TTL_SECONDS` (default 12 hours; `0` disables stale refresh only). The first request / refresh may take longer (full scrape). If a stale refresh fails, the API serves existing local data. Use `POST .../sync` to force a refresh.
+User-scoped list endpoints (`/movies`, `/favorites`, …) auto-sync from Letterboxd when the username is **not** in the local database yet (blocking scrape), or kick off a **background** refresh when the last successful sync is older than `USER_SYNC_TTL_SECONDS` (default 12 hours; `0` disables stale refresh). Stale refresh does **not** block the response.
+
+`GET /api/users/:username` is special for **first-time** users: it returns **202** and starts sync in the background (poll `poll` / `GET .../sync/:syncId`). After `SUCCESS`, retry the profile GET for **200**. Use `POST .../sync` to force a full blocking refresh.
 
 ### Synced users
 
@@ -115,6 +117,22 @@ Each `items[]` entry uses the same shape as `GET /api/users/:username`.
 `GET /api/users/:username`
 
 Optional query: `fields` — sparse fieldset of UserProfile keys.
+
+**First-time username (not in DB yet):** responds **202** immediately:
+
+```json
+{
+  "status": "RUNNING",
+  "syncId": "clx...",
+  "username": "example",
+  "startedAt": "2026-08-10T00:00:00.000Z",
+  "poll": "/api/users/example/sync/clx..."
+}
+```
+
+Poll `GET /api/users/:username/sync/:syncId` until `status` is `SUCCESS` or `FAILED`, then retry the profile GET.
+
+**Already synced:** **200** with the profile shape below.
 
 ```json
 {
@@ -283,9 +301,13 @@ Optional query `fields` — top-level keys of the payload below.
 
 `POST /api/users/:username/sync`
 
-Forces a Letterboxd list + diary scrape and upserts local rows. Film genres/directors/posters are **not** filled during sync — they are enriched on demand when those movies appear in API responses. Diary dates are best-effort.
+Forces a Letterboxd list + diary scrape and upserts local rows (blocking until complete). Film genres/directors/posters are **not** filled during sync — they are enriched on demand when those movies appear in API responses. Diary dates are best-effort.
 
 Optional query `fields` — keys of the sync response object.
+
+`GET /api/users/:username/sync/:syncId`
+
+Returns sync job status (`PENDING` | `RUNNING` | `SUCCESS` | `FAILED`) for polling after a profile **202**.
 
 ### Recommendations
 

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.7.0] - 2026-08-10
+
+### Added
+
+- `GET /api/users/:username` returns **202** + poll URL for first-time (unsynced) users; `GET /api/users/:username/sync/:syncId` for sync status
+- Background sync / stale refresh use Vercel `waitUntil` via `scheduleBackground` so work continues after the response
+- Batch Movie / UserMovie writes during Letterboxd sync (`syncEnsureMovies`, `syncUpsertMany`)
+- Profile stats via SQL aggregates (`getProfileStats`) instead of loading all user movies
+- Letterboxd scraper page pipeline (prefetch next page after delay) and Vercel default `LETTERBOXD_PAGE_DELAY_MS=200` when unset
+
+### Changed
+
+- Stale sync refresh is fire-and-forget (no longer blocks GET responses when local data exists)
+- Docs / `.env.vercel.example` recommend production sync tuning (`PAGE_DELAY=200`, higher TTL)
+
 ## [3.6.6] - 2026-08-10
 
 ### Changed

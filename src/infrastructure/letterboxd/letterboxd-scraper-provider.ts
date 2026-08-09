@@ -71,14 +71,13 @@ export class LetterboxdScraperProvider implements MovieProvider {
     const all: LetterboxdDiaryEntry[] = [];
     const seen = new Set<string>();
 
+    let nextHtml: Promise<string> | null = this.http.getText(this.diaryUrl(normalized, 1));
+
     for (let page = 1; page <= this.maxPages; page++) {
-      const url =
-        page === 1
-          ? `${LETTERBOXD_BASE_URL}/${normalized}/films/diary/`
-          : `${LETTERBOXD_BASE_URL}/${normalized}/films/diary/page/${page}/`;
+      if (!nextHtml) break;
 
       try {
-        const html = await this.http.getText(url);
+        const html = await nextHtml;
         const entries = parseDiaryPageHtml(html);
 
         for (const entry of entries) {
@@ -89,12 +88,10 @@ export class LetterboxdScraperProvider implements MovieProvider {
 
         const hasNext = parseHasNextPage(html);
         if (!hasNext || entries.length === 0) break;
+        if (this.shouldStopPagination(normalized, 'diary', page)) break;
+        if (page >= this.maxPages) break;
 
-        if (this.shouldStopPagination(normalized, 'diary', page)) {
-          break;
-        }
-
-        await this.delayBetweenPages();
+        nextHtml = this.fetchAfterDelay(this.diaryUrl(normalized, page + 1));
       } catch (error) {
         if (page === 1) {
           this.logger.warn(
@@ -157,14 +154,13 @@ export class LetterboxdScraperProvider implements MovieProvider {
     const all: LetterboxdFilm[] = [];
     const seen = new Set<string>();
 
+    let nextHtml: Promise<string> | null = this.http.getText(this.filmsUrl(normalized, path, 1));
+
     for (let page = 1; page <= this.maxPages; page++) {
-      const url =
-        page === 1
-          ? `${LETTERBOXD_BASE_URL}/${normalized}/${path}/`
-          : `${LETTERBOXD_BASE_URL}/${normalized}/${path}/page/${page}/`;
+      if (!nextHtml) break;
 
       try {
-        const html = await this.http.getText(url);
+        const html = await nextHtml;
         const films = parseFilmsPageHtml(html);
 
         for (const film of films) {
@@ -175,12 +171,11 @@ export class LetterboxdScraperProvider implements MovieProvider {
 
         const hasNext = parseHasNextPage(html);
         if (!hasNext || films.length === 0) break;
+        if (this.shouldStopPagination(normalized, path, page)) break;
+        if (page >= this.maxPages) break;
 
-        if (this.shouldStopPagination(normalized, path, page)) {
-          break;
-        }
-
-        await this.delayBetweenPages();
+        // Overlap delay + next fetch with processing of the current page already done.
+        nextHtml = this.fetchAfterDelay(this.filmsUrl(normalized, path, page + 1));
       } catch (error) {
         if (page === 1) {
           this.logger.error({ err: error, username: normalized, path }, 'Failed to scrape Letterboxd films');
@@ -195,6 +190,23 @@ export class LetterboxdScraperProvider implements MovieProvider {
     }
 
     return all;
+  }
+
+  private filmsUrl(username: string, path: string, page: number): string {
+    return page === 1
+      ? `${LETTERBOXD_BASE_URL}/${username}/${path}/`
+      : `${LETTERBOXD_BASE_URL}/${username}/${path}/page/${page}/`;
+  }
+
+  private diaryUrl(username: string, page: number): string {
+    return page === 1
+      ? `${LETTERBOXD_BASE_URL}/${username}/films/diary/`
+      : `${LETTERBOXD_BASE_URL}/${username}/films/diary/page/${page}/`;
+  }
+
+  private async fetchAfterDelay(url: string): Promise<string> {
+    await this.delayBetweenPages();
+    return this.http.getText(url);
   }
 
   private shouldStopPagination(username: string, path: string, page: number): boolean {

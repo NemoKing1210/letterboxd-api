@@ -4,6 +4,7 @@ import type {
   SyncHistoryRepository,
   UserMovieRepository,
   UserRepository,
+  UserMovieProfileStats,
 } from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
 import type { AppLogger } from '../../../infrastructure/logger';
@@ -36,6 +37,16 @@ export type UsersServiceDeps = {
   autoSyncIfMissing?: boolean;
 };
 
+export type GetProfileResult =
+  | { kind: 'ready'; profile: UserProfile }
+  | {
+      kind: 'syncing';
+      syncId: string;
+      username: string;
+      startedAt: string;
+      poll: string;
+    };
+
 export class UsersService {
   constructor(private readonly deps: UsersServiceDeps) {}
 
@@ -58,7 +69,7 @@ export class UsersService {
 
     return createPaginatedResult(
       items.map((row) =>
-        buildUserProfile(
+        buildUserProfileFromEntries(
           row.user,
           entriesByUserId.get(row.user.id) ?? [],
           row.lastSyncedAt?.toISOString() ?? null,
@@ -70,28 +81,79 @@ export class UsersService {
     );
   }
 
-  async getProfile(username: string): Promise<UserProfile> {
+  async getProfile(username: string): Promise<GetProfileResult> {
     const normalized = normalizeUsername(username);
-    const user = await ensureLocalUser(normalized, this.deps);
+    const existing = await this.deps.users.findByUsername(normalized);
+
+    if (!existing) {
+      const running = await this.deps.syncHistory.findLatestRunning(normalized);
+      if (running) {
+        return {
+          kind: 'syncing',
+          syncId: running.id,
+          username: normalized,
+          startedAt: running.startedAt.toISOString(),
+          poll: `/api/users/${normalized}/sync/${running.id}`,
+        };
+      }
+
+      const { syncId } = await this.deps.syncService.startBackgroundSync(normalized);
+      const row = await this.deps.syncHistory.findById(syncId);
+      return {
+        kind: 'syncing',
+        syncId,
+        username: normalized,
+        startedAt: row?.startedAt.toISOString() ?? new Date().toISOString(),
+        poll: `/api/users/${normalized}/sync/${syncId}`,
+      };
+    }
+
+    const user = await ensureLocalUser(normalized, {
+      ...this.deps,
+      autoSyncIfMissing: false,
+    });
 
     const cacheKey = CACHE_KEYS.userProfile(normalized);
     const cached = await this.deps.cache.get<UserProfile>(cacheKey);
-    if (cached) return cached;
+    if (cached) return { kind: 'ready', profile: cached };
 
-    const entries = await this.deps.userMovies.findAllForUser(user.id);
-    const latestSync = await this.deps.syncHistory.findLatest(normalized);
-    const profile = buildUserProfile(
+    const [stats, latestSync] = await Promise.all([
+      this.deps.userMovies.getProfileStats(user.id),
+      this.deps.syncHistory.findLatest(normalized),
+    ]);
+
+    const profile = buildUserProfileFromStats(
       user,
-      entries,
+      stats,
       latestSync?.finishedAt?.toISOString() ?? latestSync?.startedAt.toISOString() ?? null,
     );
 
     await this.deps.cache.set(cacheKey, profile, this.deps.env.CACHE_TTL);
-    return profile;
+    return { kind: 'ready', profile };
   }
 }
 
-function buildUserProfile(
+function buildUserProfileFromStats(
+  user: User,
+  stats: UserMovieProfileStats,
+  lastSyncedAt: string | null,
+): UserProfile {
+  return {
+    username: user.username,
+    url: userProfileUrl(user.username, LETTERBOXD_BASE_URL),
+    moviesCount: stats.moviesCount,
+    averageRating: stats.averageRating,
+    favoriteGenres: stats.favoriteGenres,
+    lastSyncedAt,
+    followingCount: user.followingCount,
+    followersCount: user.followersCount,
+    externalLinks: parseStoredExternalLinks(user.externalLinks),
+    favoriteFilms: parseStoredProfileFilms(user.favoriteFilms),
+    recentLikes: parseStoredProfileFilms(user.recentLikes),
+  };
+}
+
+function buildUserProfileFromEntries(
   user: User,
   entries: UserMovieEntry[],
   lastSyncedAt: string | null,

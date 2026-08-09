@@ -1,5 +1,18 @@
-import type { Movie, Prisma, PrismaClient, SyncHistory, SyncStatus, User, UserMovie } from '@prisma/client';
-import { FAVORITE_RATING_THRESHOLD, MAX_LIMIT } from '../../shared/constants';
+import {
+  Prisma,
+  type Movie,
+  type PrismaClient,
+  type SyncHistory,
+  type SyncStatus,
+  type User,
+  type UserMovie,
+} from '@prisma/client';
+import { randomUUID } from 'node:crypto';
+import {
+  FAVORITE_RATING_THRESHOLD,
+  MAX_LIMIT,
+  SYNC_DB_BATCH_SIZE,
+} from '../../shared/constants';
 import { clamp } from '../../shared/utils';
 
 export type UserWithMovies = User & {
@@ -84,6 +97,28 @@ export type UserListRow = {
   lastSyncedAt: Date | null;
 };
 
+/** Film row used during Letterboxd sync batch upsert. */
+export type SyncMovieInput = {
+  slug: string;
+  title: string;
+  year: number | null;
+  poster: string | null;
+};
+
+export type SyncUserMovieInput = {
+  movieId: string;
+  rating: number | null;
+  favorite: boolean;
+  watchedDate: Date | null;
+};
+
+/** Aggregates for GET /api/users/:username without loading every UserMovie. */
+export type UserMovieProfileStats = {
+  moviesCount: number;
+  averageRating: number | null;
+  favoriteGenres: Array<{ name: string; count: number }>;
+};
+
 export interface UserRepository {
   findByUsername(username: string): Promise<User | null>;
   findByUsernameWithMovies(username: string): Promise<UserWithMovies | null>;
@@ -102,6 +137,8 @@ export interface MovieRepository {
     director?: string | null;
     enriched?: boolean;
   }): Promise<Movie>;
+  /** Ensure movies exist for sync; returns slug → Movie id. */
+  syncEnsureMovies(films: SyncMovieInput[]): Promise<Map<string, string>>;
 }
 
 export interface UserMovieRepository {
@@ -112,6 +149,9 @@ export interface UserMovieRepository {
     favorite: boolean;
     watchedDate: Date | null;
   }): Promise<UserMovie>;
+  /** Bulk upsert user–movie links for one user (chunked). */
+  syncUpsertMany(userId: string, rows: SyncUserMovieInput[]): Promise<number>;
+  getProfileStats(userId: string): Promise<UserMovieProfileStats>;
   findFiltered(userId: string, filters: MovieListFilters): Promise<{ items: Array<UserMovie & { movie: Movie }>; total: number }>;
   findBySearch(
     userId: string,
@@ -127,8 +167,10 @@ export interface SyncHistoryRepository {
     id: string,
     data: { status: SyncStatus; finishedAt?: Date; error?: string | null; userId?: string },
   ): Promise<SyncHistory>;
+  findById(id: string): Promise<SyncHistory | null>;
   findLatest(username: string): Promise<SyncHistory | null>;
   findLatestSuccessful(username: string): Promise<SyncHistory | null>;
+  findLatestRunning(username: string): Promise<SyncHistory | null>;
 }
 
 export class PrismaUserRepository implements UserRepository {
@@ -372,6 +414,74 @@ export class PrismaMovieRepository implements MovieRepository {
       },
     });
   }
+
+  async syncEnsureMovies(films: SyncMovieInput[]): Promise<Map<string, string>> {
+    const bySlug = new Map<string, SyncMovieInput>();
+    for (const film of films) {
+      if (!bySlug.has(film.slug)) {
+        bySlug.set(film.slug, film);
+      }
+    }
+    const unique = [...bySlug.values()];
+    if (unique.length === 0) {
+      return new Map();
+    }
+
+    const slugs = unique.map((f) => f.slug);
+    let existing = await this.findBySlugs(slugs);
+    const missing = unique.filter((f) => !existing.has(f.slug));
+
+    for (let i = 0; i < missing.length; i += SYNC_DB_BATCH_SIZE) {
+      const chunk = missing.slice(i, i + SYNC_DB_BATCH_SIZE);
+      await this.prisma.movie.createMany({
+        data: chunk.map((film) => ({
+          slug: film.slug,
+          title: film.title,
+          year: film.year,
+          poster: film.poster,
+          genres: [],
+          enriched: false,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    if (missing.length > 0) {
+      existing = await this.findBySlugs(slugs);
+    }
+
+    const toUpdate: SyncMovieInput[] = [];
+    for (const film of unique) {
+      const row = existing.get(film.slug);
+      if (!row) continue;
+      const posterChanged = film.poster !== null && film.poster !== row.poster;
+      const yearChanged = film.year !== null && film.year !== row.year;
+      const titleChanged = film.title !== row.title;
+      if (titleChanged || yearChanged || posterChanged) {
+        toUpdate.push(film);
+      }
+    }
+
+    for (let i = 0; i < toUpdate.length; i += SYNC_DB_BATCH_SIZE) {
+      const chunk = toUpdate.slice(i, i + SYNC_DB_BATCH_SIZE);
+      for (const film of chunk) {
+        await this.prisma.movie.update({
+          where: { slug: film.slug },
+          data: {
+            title: film.title,
+            ...(film.year !== null ? { year: film.year } : {}),
+            ...(film.poster !== null ? { poster: film.poster } : {}),
+          },
+        });
+      }
+    }
+
+    const idBySlug = new Map<string, string>();
+    for (const [slug, movie] of existing) {
+      idBySlug.set(slug, movie.id);
+    }
+    return idBySlug;
+  }
 }
 
 export class PrismaUserMovieRepository implements UserMovieRepository {
@@ -398,6 +508,80 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
         ...(data.watchedDate !== null ? { watchedDate: data.watchedDate } : {}),
       },
     });
+  }
+
+  async syncUpsertMany(userId: string, rows: SyncUserMovieInput[]): Promise<number> {
+    if (rows.length === 0) {
+      return 0;
+    }
+
+    const byMovieId = new Map<string, SyncUserMovieInput>();
+    for (const row of rows) {
+      byMovieId.set(row.movieId, row);
+    }
+    const unique = [...byMovieId.values()];
+
+    for (let i = 0; i < unique.length; i += SYNC_DB_BATCH_SIZE) {
+      const chunk = unique.slice(i, i + SYNC_DB_BATCH_SIZE);
+      const values: Prisma.Sql[] = [];
+      for (const row of chunk) {
+        values.push(
+          Prisma.sql`(
+            ${randomUUID()},
+            ${userId},
+            ${row.movieId},
+            ${row.rating},
+            ${row.favorite},
+            ${row.watchedDate}
+          )`,
+        );
+      }
+
+      await this.prisma.$executeRaw`
+        INSERT INTO "UserMovie" (id, "userId", "movieId", rating, favorite, "watchedDate")
+        VALUES ${Prisma.join(values)}
+        ON CONFLICT ("userId", "movieId") DO UPDATE SET
+          rating = EXCLUDED.rating,
+          favorite = EXCLUDED.favorite,
+          "watchedDate" = COALESCE(EXCLUDED."watchedDate", "UserMovie"."watchedDate")
+      `;
+    }
+
+    return unique.length;
+  }
+
+  async getProfileStats(userId: string): Promise<UserMovieProfileStats> {
+    const [countRow, avgRow, genreRows] = await Promise.all([
+      this.prisma.userMovie.count({ where: { userId } }),
+      this.prisma.userMovie.aggregate({
+        where: { userId, rating: { not: null } },
+        _avg: { rating: true },
+      }),
+      this.prisma.$queryRaw<Array<{ name: string; count: bigint }>>`
+        SELECT g AS name, COUNT(*)::bigint AS count
+        FROM "UserMovie" um
+        INNER JOIN "Movie" m ON m.id = um."movieId"
+        CROSS JOIN LATERAL unnest(m.genres) AS g
+        WHERE um."userId" = ${userId}
+        GROUP BY g
+        ORDER BY COUNT(*) DESC, g ASC
+        LIMIT 5
+      `,
+    ]);
+
+    const averageRating =
+      avgRow._avg.rating === null || avgRow._avg.rating === undefined
+        ? null
+        : Math.round(avgRow._avg.rating * 100) / 100;
+
+    return {
+      moviesCount: countRow,
+      averageRating,
+      favoriteGenres: genreRows.map((row) => ({
+        name: row.name,
+        count: Number(row.count),
+      })),
+    };
   }
 
   async findFiltered(
@@ -554,10 +738,21 @@ export class PrismaSyncHistoryRepository implements SyncHistoryRepository {
     });
   }
 
+  findById(id: string): Promise<SyncHistory | null> {
+    return this.prisma.syncHistory.findUnique({ where: { id } });
+  }
+
   findLatestSuccessful(username: string): Promise<SyncHistory | null> {
     return this.prisma.syncHistory.findFirst({
       where: { username: username.toLowerCase(), status: 'SUCCESS' },
       orderBy: { finishedAt: 'desc' },
+    });
+  }
+
+  findLatestRunning(username: string): Promise<SyncHistory | null> {
+    return this.prisma.syncHistory.findFirst({
+      where: { username: username.toLowerCase(), status: 'RUNNING' },
+      orderBy: { startedAt: 'desc' },
     });
   }
 }

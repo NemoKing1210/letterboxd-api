@@ -3,13 +3,15 @@ import type {
   MovieRepository,
   UserMovieRepository,
   UserRepository,
+  SyncMovieInput,
+  SyncUserMovieInput,
 } from '../../../infrastructure/database';
 import type { CacheProvider } from '../../../infrastructure/cache';
 import type { LetterboxdDiaryEntry, MovieProvider } from '../../../infrastructure/letterboxd';
 import type { AppLogger } from '../../../infrastructure/logger';
 import { CACHE_KEYS, SYNC_STATUS } from '../../../shared/constants';
 import { AppError } from '../../../shared/errors/app-error';
-import { normalizeUsername } from '../../../shared/utils';
+import { normalizeUsername, scheduleBackground } from '../../../shared/utils';
 import { letterboxdFilmSchema } from '../schemas/sync-schemas';
 import type { SyncResponse } from '../schemas/sync-schemas';
 import { realPoster } from './merge-film-metadata';
@@ -38,19 +40,71 @@ export class SynchronizationService {
       return existing;
     }
 
-    const promise = this.runSync(normalized).finally(() => {
-      this.inFlight.delete(normalized);
-    });
+    const promise = this.beginSync(normalized);
     this.inFlight.set(normalized, promise);
-    return promise;
+    try {
+      return await promise;
+    } finally {
+      this.inFlight.delete(normalized);
+    }
   }
 
-  private async runSync(normalized: string): Promise<SyncResponse> {
+  /**
+   * Enqueue a sync and return its SyncHistory id immediately (does not await scrape).
+   * Safe to call concurrently — joins an in-flight sync when present.
+   */
+  async startBackgroundSync(username: string): Promise<{ syncId: string }> {
+    const normalized = normalizeUsername(username);
+    const existing = this.inFlight.get(normalized);
+    if (existing) {
+      const running = await this.deps.syncHistory.findLatestRunning(normalized);
+      if (running) {
+        return { syncId: running.id };
+      }
+      const latest = await this.deps.syncHistory.findLatest(normalized);
+      if (latest) {
+        return { syncId: latest.id };
+      }
+    }
+
     const sync = await this.deps.syncHistory.create({
       username: normalized,
       status: 'RUNNING',
     });
 
+    const promise = this.runSyncWithRecord(normalized, sync).finally(() => {
+      this.inFlight.delete(normalized);
+    });
+    this.inFlight.set(normalized, promise);
+    scheduleBackground(promise);
+    return { syncId: sync.id };
+  }
+
+  getSyncStatus(syncId: string) {
+    return this.deps.syncHistory.findById(syncId);
+  }
+
+  getLatestSync(username: string) {
+    return this.deps.syncHistory.findLatest(normalizeUsername(username));
+  }
+
+  getLatestRunningSync(username: string) {
+    return this.deps.syncHistory.findLatestRunning(normalizeUsername(username));
+  }
+
+  private beginSync(normalized: string): Promise<SyncResponse> {
+    return this.deps.syncHistory
+      .create({
+        username: normalized,
+        status: 'RUNNING',
+      })
+      .then((sync) => this.runSyncWithRecord(normalized, sync));
+  }
+
+  private async runSyncWithRecord(
+    normalized: string,
+    sync: { id: string; startedAt: Date },
+  ): Promise<SyncResponse> {
     this.deps.logger.info({ username: normalized, syncId: sync.id }, 'Synchronization started');
 
     try {
@@ -67,7 +121,14 @@ export class SynchronizationService {
         favoriteFilms: profile.favoriteFilms,
         recentLikes: profile.recentLikes,
       });
-      let moviesSynced = 0;
+
+      const movieInputs: SyncMovieInput[] = [];
+      const linkDraft: Array<{
+        slug: string;
+        rating: number | null;
+        favorite: boolean;
+        watchedDate: Date | null;
+      }> = [];
 
       for (const raw of films) {
         const parsed = letterboxdFilmSchema.safeParse(raw);
@@ -80,24 +141,41 @@ export class SynchronizationService {
         }
 
         const film = parsed.data;
-        const movie = await this.deps.movies.upsertBySlug({
+        movieInputs.push({
           slug: film.slug,
           title: film.title,
           year: film.year,
           poster: realPoster(film.poster),
         });
-
         const watchedDateRaw = watchedBySlug.get(film.slug) ?? null;
-        await this.deps.userMovies.upsert({
-          userId: user.id,
-          movieId: movie.id,
+        linkDraft.push({
+          slug: film.slug,
           rating: film.rating,
           favorite: film.liked,
           watchedDate: watchedDateRaw ? new Date(watchedDateRaw) : null,
         });
-
-        moviesSynced += 1;
       }
+
+      const idBySlug = await this.deps.movies.syncEnsureMovies(movieInputs);
+      const userMovieRows: SyncUserMovieInput[] = [];
+      for (const link of linkDraft) {
+        const movieId = idBySlug.get(link.slug);
+        if (!movieId) {
+          this.deps.logger.warn(
+            { username: normalized, slug: link.slug },
+            'Movie missing after syncEnsureMovies; skipping UserMovie',
+          );
+          continue;
+        }
+        userMovieRows.push({
+          movieId,
+          rating: link.rating,
+          favorite: link.favorite,
+          watchedDate: link.watchedDate,
+        });
+      }
+
+      const moviesSynced = await this.deps.userMovies.syncUpsertMany(user.id, userMovieRows);
 
       const finished = await this.deps.syncHistory.update(sync.id, {
         status: 'SUCCESS',

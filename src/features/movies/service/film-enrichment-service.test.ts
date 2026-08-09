@@ -66,7 +66,8 @@ describe('FilmEnrichmentService', () => {
     const upsertBySlug = vi.fn(async () => enrichedRow);
     const movies: MovieRepository = {
       findBySlugs: vi.fn(),
-      upsertBySlug,
+        upsertBySlug,
+        syncEnsureMovies: vi.fn(),
     };
 
     const provider: MovieProvider = {
@@ -121,7 +122,7 @@ describe('FilmEnrichmentService', () => {
         getWatchlist: vi.fn(),
         getFilmDetails,
       },
-      movies: { findBySlugs: vi.fn(), upsertBySlug: vi.fn() },
+      movies: { findBySlugs: vi.fn(), upsertBySlug: vi.fn(), syncEnsureMovies: vi.fn() },
       logger: createLogger(),
     });
 
@@ -184,6 +185,7 @@ describe('FilmEnrichmentService', () => {
       movies: {
         findBySlugs: vi.fn(),
         upsertBySlug: vi.fn(async () => enrichedRow),
+        syncEnsureMovies: vi.fn(),
       },
       logger: createLogger(),
       concurrency: 1,

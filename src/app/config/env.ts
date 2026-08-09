@@ -79,7 +79,12 @@ const envSchema = z
     HTTPS_PROXY: optionalProxyUrl,
     NO_PROXY: z.string().optional().default(''),
     LETTERBOXD_TIMEOUT: z.coerce.number().int().positive().default(15_000),
-    LETTERBOXD_PAGE_DELAY_MS: z.coerce.number().int().nonnegative().default(500),
+    LETTERBOXD_PAGE_DELAY_MS: z.preprocess((value) => {
+      if (value === undefined || value === null || value === '') {
+        return process.env.VERCEL ? 200 : 500;
+      }
+      return value;
+    }, z.coerce.number().int().nonnegative()),
     LETTERBOXD_MAX_PAGES: z.coerce.number().int().positive().default(50),
     LETTERBOXD_ENRICH_CONCURRENCY: z.coerce.number().int().positive().default(8),
     LETTERBOXD_ENRICH_RETRIES: z.coerce.number().int().positive().default(3),

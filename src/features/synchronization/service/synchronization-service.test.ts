@@ -3,7 +3,7 @@ import { SynchronizationService } from './synchronization-service';
 import type { LetterboxdFilm, LetterboxdProfile, MovieProvider } from '../../../infrastructure/letterboxd';
 import type { CacheProvider } from '../../../infrastructure/cache';
 import type { AppLogger } from '../../../infrastructure/logger';
-import type { Movie, SyncHistory, User, UserMovie } from '@prisma/client';
+import type { SyncHistory, User } from '@prisma/client';
 import type { Prisma } from '@prisma/client';
 
 function createLogger(): AppLogger {
@@ -106,18 +106,6 @@ describe('SynchronizationService', () => {
 
     const user = createUser();
 
-    const movie: Movie = {
-      id: 'm1',
-      title: 'Inception',
-      year: 2010,
-      tmdbId: null,
-      poster: null,
-      genres: [],
-      director: null,
-      slug: 'inception',
-      enriched: false,
-    };
-
     const syncRecord: SyncHistory = {
       id: 's1',
       userId: null,
@@ -128,16 +116,9 @@ describe('SynchronizationService', () => {
       error: null,
     };
 
-    const upsertBySlug = vi.fn(async () => movie);
     const upsertByUsername = vi.fn(async () => user);
-    const upsertUserMovie = vi.fn(async (): Promise<UserMovie> => ({
-      id: 'um1',
-      userId: user.id,
-      movieId: movie.id,
-      rating: 4.5,
-      favorite: true,
-      watchedDate: new Date('2024-06-01T00:00:00.000Z'),
-    }));
+    const syncEnsureMovies = vi.fn(async () => new Map([['inception', 'm1']]));
+    const syncUpsertMany = vi.fn(async () => 1);
 
     const service = new SynchronizationService({
       movieProvider: provider,
@@ -149,10 +130,13 @@ describe('SynchronizationService', () => {
       },
       movies: {
         findBySlugs: vi.fn(),
-        upsertBySlug,
+        upsertBySlug: vi.fn(),
+        syncEnsureMovies,
       },
       userMovies: {
-        upsert: upsertUserMovie,
+        upsert: vi.fn(),
+        syncUpsertMany,
+        getProfileStats: vi.fn(),
         findFiltered: vi.fn(),
         findBySearch: vi.fn(),
         findAllForUser: vi.fn(),
@@ -166,8 +150,10 @@ describe('SynchronizationService', () => {
           finishedAt: data.finishedAt ?? null,
           status: data.status,
         })),
+        findById: vi.fn(),
         findLatest: vi.fn(),
         findLatestSuccessful: vi.fn(),
+        findLatestRunning: vi.fn(),
       },
       cache: {
         get: vi.fn(),
@@ -194,19 +180,22 @@ describe('SynchronizationService', () => {
       ],
       recentLikes: [],
     });
-    expect(upsertBySlug).toHaveBeenCalledWith({
-      slug: 'inception',
-      title: 'Inception',
-      year: 2010,
-      poster: null,
-    });
-    expect(upsertUserMovie).toHaveBeenCalledWith({
-      userId: 'u1',
-      movieId: 'm1',
-      rating: 4.5,
-      favorite: true,
-      watchedDate: new Date('2024-06-01T00:00:00.000Z'),
-    });
+    expect(syncEnsureMovies).toHaveBeenCalledWith([
+      {
+        slug: 'inception',
+        title: 'Inception',
+        year: 2010,
+        poster: null,
+      },
+    ]);
+    expect(syncUpsertMany).toHaveBeenCalledWith('u1', [
+      {
+        movieId: 'm1',
+        rating: 4.5,
+        favorite: true,
+        watchedDate: new Date('2024-06-01T00:00:00.000Z'),
+      },
+    ]);
   });
 
   it('dedupes concurrent syncs for the same username', async () => {
@@ -249,9 +238,12 @@ describe('SynchronizationService', () => {
       movies: {
         findBySlugs: vi.fn(),
         upsertBySlug: vi.fn(),
+        syncEnsureMovies: vi.fn(async () => new Map()),
       },
       userMovies: {
         upsert: vi.fn(),
+        syncUpsertMany: vi.fn(async () => 0),
+        getProfileStats: vi.fn(),
         findFiltered: vi.fn(),
         findBySearch: vi.fn(),
         findAllForUser: vi.fn(),
@@ -265,8 +257,10 @@ describe('SynchronizationService', () => {
           finishedAt: data.finishedAt ?? null,
           status: data.status,
         })),
+        findById: vi.fn(),
         findLatest: vi.fn(),
         findLatestSuccessful: vi.fn(),
+        findLatestRunning: vi.fn(),
       },
       cache: {
         get: vi.fn(),

@@ -24,6 +24,9 @@ export type {
   MovieListFilters,
   MovieListSort,
   MovieSearchQuery,
+  SyncMovieInput,
+  SyncUserMovieInput,
+  UserMovieProfileStats,
 } from './repositories';
 export type {
   EmbeddingRepository,

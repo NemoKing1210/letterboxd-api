@@ -186,16 +186,18 @@ Expected: health returns OK JSON; `/docs` loads; user routes work after DB + syn
 
 ### First sync warning
 
-`POST /api/users/:username/sync` (and first `GET` that triggers sync) scrapes Letterboxd and can take a long time. `vercel.json` sets `maxDuration` to **300s** (requires [Pro](https://vercel.com/docs/functions/configuring-functions/duration) or higher). On Hobby the platform caps lower — set `maxDuration` / `REQUEST_BUDGET_MS` to your plan limit.
+`POST /api/users/:username/sync` scrapes Letterboxd and can take a long time (batch DB writes + page pipeline help, but large libraries still need Pro `maxDuration`). `vercel.json` sets `maxDuration` to **300s**.
 
-The app also applies a soft request budget (`REQUEST_BUDGET_MS`, default ~270s on Vercel) so scrape pagination and on-demand enrichment **stop early** and return instead of hitting `Task timed out after N seconds`.
+`GET /api/users/:username` for a **new** username returns **202** and syncs in the background (Vercel `waitUntil`) — poll `GET .../sync/:syncId` instead of waiting on the profile request. Other list endpoints may still block on first sync via `ensureLocalUser`.
+
+On Vercel, `LETTERBOXD_PAGE_DELAY_MS` defaults to **200** when unset (override with env). Soft `REQUEST_BUDGET_MS` (~270s) stops scrape/enrichment before a hard timeout.
 
 Practical tips:
 
-- Start with a smaller account to confirm the pipeline.
-- Prefer Pro / higher function limits if you sync large libraries in one request.
-- Rely on `USER_SYNC_TTL_SECONDS` so day-to-day reads are fast after the first successful sync.
-- Use `fields=title,year,rating` (etc.) to skip film-page enrichment when you do not need `genres` / `director` / `poster`.
+- Prefer `GET` profile → poll → retry for first-time users (avoids 200s hanging clients).
+- Set `LETTERBOXD_PAGE_DELAY_MS=200` and `USER_SYNC_TTL_SECONDS=86400` in production if you want fewer background refreshes.
+- Rely on `USER_SYNC_TTL_SECONDS` / cache so day-to-day reads stay fast after the first successful sync.
+- Use `fields=title,year,rating` to skip film-page enrichment when you do not need `genres` / `director` / `poster`.
 - Watch **Vercel → Deployments → Functions / Logs** for timeouts and Prisma errors.
 - For Hobby, lower `functions.api/index.ts.maxDuration` in `vercel.json` (and optionally set `REQUEST_BUDGET_MS`) to your plan limit (e.g. `10`) so deploys do not fail validation.
 

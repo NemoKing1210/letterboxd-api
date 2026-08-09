@@ -65,6 +65,8 @@ function createService(entries: Array<UserMovie & { movie: Movie }>) {
   };
   const userMovies: UserMovieRepository = {
     upsert: vi.fn(),
+    syncUpsertMany: vi.fn(),
+    getProfileStats: vi.fn(),
     findFiltered: vi.fn(async (_userId, filters) => {
       let items = entries;
       if (filters.likedOnly) {
@@ -90,8 +92,10 @@ function createService(entries: Array<UserMovie & { movie: Movie }>) {
   const syncHistory: SyncHistoryRepository = {
     create: vi.fn(),
     update: vi.fn(),
+    findById: vi.fn(),
     findLatest: vi.fn(),
     findLatestSuccessful: vi.fn(async () => latestSuccess),
+    findLatestRunning: vi.fn(async () => null),
   };
   const cacheStore = new Map<string, unknown>();
   const cache = {
@@ -116,7 +120,7 @@ function createService(entries: Array<UserMovie & { movie: Movie }>) {
     users,
     userMovies,
     syncHistory,
-    syncService: { syncLetterboxdUser: vi.fn() },
+    syncService: { syncLetterboxdUser: vi.fn(), startBackgroundSync: vi.fn() },
     enrichment,
     cache,
     env: { CACHE_TTL: 60 } as Env,

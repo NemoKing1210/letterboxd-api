@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+﻿import { describe, expect, it, vi } from 'vitest';
 import type { SyncHistory, User } from '@prisma/client';
 import type { SyncHistoryRepository, UserRepository } from '../../../infrastructure/database';
 import { NotFoundError } from '../../../shared/errors/app-error';
@@ -36,8 +36,10 @@ function createSyncHistory(
   return {
     create: vi.fn(),
     update: vi.fn(),
+    findById: vi.fn(),
     findLatest: vi.fn(),
     findLatestSuccessful,
+    findLatestRunning: vi.fn(async () => null),
   };
 }
 
@@ -50,7 +52,7 @@ describe('ensureLocalUser', () => {
       upsertByUsername: vi.fn(),
       findFiltered: vi.fn(),
     };
-    const syncService = { syncLetterboxdUser: vi.fn() };
+    const syncService = { syncLetterboxdUser: vi.fn(), startBackgroundSync: vi.fn() };
     const finishedAt = new Date('2024-01-01T12:00:00.000Z');
 
     const result = await ensureLocalUser('Demo', {
@@ -77,7 +79,7 @@ describe('ensureLocalUser', () => {
       upsertByUsername: vi.fn(),
       findFiltered: vi.fn(),
     };
-    const syncService = { syncLetterboxdUser: vi.fn(async () => ({})) };
+    const syncService = { syncLetterboxdUser: vi.fn(async () => ({})), startBackgroundSync: vi.fn() };
 
     const result = await ensureLocalUser('demo', {
       users,
@@ -99,7 +101,7 @@ describe('ensureLocalUser', () => {
       upsertByUsername: vi.fn(),
       findFiltered: vi.fn(),
     };
-    const syncService = { syncLetterboxdUser: vi.fn(async () => ({})) };
+    const syncService = { syncLetterboxdUser: vi.fn(async () => ({})), startBackgroundSync: vi.fn() };
     const finishedAt = new Date('2024-01-01T00:00:00.000Z');
 
     const result = await ensureLocalUser('demo', {
@@ -110,8 +112,10 @@ describe('ensureLocalUser', () => {
       now: () => new Date('2024-01-01T02:00:01.000Z'),
     });
 
-    expect(syncService.syncLetterboxdUser).toHaveBeenCalledWith('demo');
     expect(result).toBe(existing);
+    expect(syncService.syncLetterboxdUser).toHaveBeenCalledWith('demo');
+    // Stale refresh is fire-and-forget — does not re-fetch user after sync.
+    expect(findByUsername).toHaveBeenCalledTimes(1);
   });
 
   it('re-syncs when no successful sync exists for a local user', async () => {
@@ -122,7 +126,7 @@ describe('ensureLocalUser', () => {
       upsertByUsername: vi.fn(),
       findFiltered: vi.fn(),
     };
-    const syncService = { syncLetterboxdUser: vi.fn(async () => ({})) };
+    const syncService = { syncLetterboxdUser: vi.fn(async () => ({})), startBackgroundSync: vi.fn() };
 
     await ensureLocalUser('demo', {
       users,
@@ -146,6 +150,7 @@ describe('ensureLocalUser', () => {
       syncLetterboxdUser: vi.fn(async () => {
         throw new Error('scrape failed');
       }),
+      startBackgroundSync: vi.fn(),
     };
     const warn = vi.fn();
     const finishedAt = new Date('2024-01-01T00:00:00.000Z');
@@ -160,7 +165,9 @@ describe('ensureLocalUser', () => {
     });
 
     expect(result).toBe(existing);
-    expect(warn).toHaveBeenCalled();
+    await vi.waitFor(() => {
+      expect(warn).toHaveBeenCalled();
+    });
   });
 
   it('skips stale refresh when TTL is 0', async () => {
@@ -171,7 +178,7 @@ describe('ensureLocalUser', () => {
       upsertByUsername: vi.fn(),
       findFiltered: vi.fn(),
     };
-    const syncService = { syncLetterboxdUser: vi.fn() };
+    const syncService = { syncLetterboxdUser: vi.fn(), startBackgroundSync: vi.fn() };
 
     await ensureLocalUser('demo', {
       users,
@@ -190,7 +197,7 @@ describe('ensureLocalUser', () => {
       upsertByUsername: vi.fn(),
       findFiltered: vi.fn(),
     };
-    const syncService = { syncLetterboxdUser: vi.fn() };
+    const syncService = { syncLetterboxdUser: vi.fn(), startBackgroundSync: vi.fn() };
 
     await expect(
       ensureLocalUser('ghost', {
@@ -211,7 +218,7 @@ describe('ensureLocalUser', () => {
       upsertByUsername: vi.fn(),
       findFiltered: vi.fn(),
     };
-    const syncService = { syncLetterboxdUser: vi.fn(async () => ({})) };
+    const syncService = { syncLetterboxdUser: vi.fn(async () => ({})), startBackgroundSync: vi.fn() };
 
     await expect(
       ensureLocalUser('ghost', {

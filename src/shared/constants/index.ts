@@ -44,6 +44,10 @@ export const DEFAULT_ENRICH_CONCURRENCY = 8;
 export const DEFAULT_ENRICH_RETRIES = 3;
 export const DEFAULT_RETRY_BASE_MS = 250;
 export const DEFAULT_RETRY_MAX_MS = 8_000;
+/** Chunk size for sync createMany / bulk upserts (pooler-friendly). */
+export const SYNC_DB_BATCH_SIZE = 100;
+/** Default Letterboxd page delay on Vercel when env is unset. */
+export const VERCEL_LETTERBOXD_PAGE_DELAY_MS = 200;
 /** Keep in sync with `vercel.json` `functions.api/index.ts.maxDuration`. */
 export const VERCEL_FUNCTION_MAX_DURATION_SECONDS = 300;
 /** MovieDto keys that require on-demand Letterboxd film-page enrichment. */

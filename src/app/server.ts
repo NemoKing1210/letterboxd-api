@@ -29,8 +29,8 @@ import {
 } from '../features/export/schemas/export-schemas';
 import { searchBodyOpenApiSchema, searchBodySchema } from '../features/search/schemas/search-schemas';
 import { movieQuerySchema, usernameParamSchema, userProfileSchema, userQuerySchema } from '../features/users/schemas/user-schemas';
-import { syncResponseSchema } from '../features/synchronization/schemas/sync-schemas';
-import { AppError, ValidationError } from '../shared/errors/app-error';
+import { syncResponseSchema, syncPendingResponseSchema, syncStatusResponseSchema, syncIdParamSchema } from '../features/synchronization/schemas/sync-schemas';
+import { AppError, NotFoundError, ValidationError } from '../shared/errors/app-error';
 import {
   MOVIE_DTO_FIELDS,
   RATINGS_FIELDS,
@@ -249,6 +249,8 @@ export function createApp(container: AppContainer) {
     path: '/api/users/{username}',
     tags: ['Users'],
     summary: 'Get user profile',
+    description:
+      'Returns the local profile when synced. If the user has never been synced, starts a background Letterboxd sync and returns **202** with a poll URL.',
     request: {
       params: usernameParamSchema,
       query: userProfileFieldsQuerySchema,
@@ -257,6 +259,10 @@ export function createApp(container: AppContainer) {
       200: {
         description: 'User profile',
         content: { 'application/json': { schema: userProfileSchema } },
+      },
+      202: {
+        description: 'First-time sync in progress — poll `poll` until SUCCESS then retry',
+        content: { 'application/json': { schema: syncPendingResponseSchema } },
       },
       404: {
         description: 'Not found',
@@ -268,8 +274,20 @@ export function createApp(container: AppContainer) {
   app.openapi(getUserRoute, async (c) => {
     const { username } = c.req.valid('param');
     const { fields } = c.req.valid('query');
-    const profile = await container.usersService.getProfile(username);
-    return c.json(applyObjectFields(profile, fields), 200);
+    const result = await container.usersService.getProfile(username);
+    if (result.kind === 'syncing') {
+      return c.json(
+        {
+          status: 'RUNNING' as const,
+          syncId: result.syncId,
+          username: result.username,
+          startedAt: result.startedAt,
+          poll: result.poll,
+        },
+        202,
+      );
+    }
+    return c.json(applyObjectFields(result.profile, fields), 200);
   });
 
   const getMoviesRoute = createRoute({
@@ -560,6 +578,46 @@ export function createApp(container: AppContainer) {
     return c.json(applyObjectFields(result, fields), 200);
   });
 
+  const getSyncStatusRoute = createRoute({
+    method: 'get',
+    path: '/api/users/{username}/sync/{syncId}',
+    tags: ['Synchronization'],
+    summary: 'Get sync job status',
+    description: 'Poll after a 202 from GET /api/users/:username until status is SUCCESS or FAILED.',
+    request: {
+      params: syncIdParamSchema,
+    },
+    responses: {
+      200: {
+        description: 'Sync status',
+        content: { 'application/json': { schema: syncStatusResponseSchema } },
+      },
+      404: {
+        description: 'Sync not found',
+        content: { 'application/json': { schema: ErrorSchema } },
+      },
+    },
+  });
+
+  app.openapi(getSyncStatusRoute, async (c) => {
+    const { username, syncId } = c.req.valid('param');
+    const row = await container.syncService.getSyncStatus(syncId);
+    if (!row || row.username.toLowerCase() !== username.toLowerCase()) {
+      throw new NotFoundError(`Sync "${syncId}" not found for user "${username}"`);
+    }
+    return c.json(
+      {
+        syncId: row.id,
+        username: row.username,
+        status: row.status,
+        startedAt: row.startedAt.toISOString(),
+        finishedAt: row.finishedAt?.toISOString() ?? null,
+        error: row.error ?? null,
+      },
+      200,
+    );
+  });
+
   const recommendationsRoute = createRoute({
     method: 'get',
     path: '/api/users/{username}/recommendations',
@@ -612,7 +670,7 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '3.6.6',
+      version: '3.7.0',
       description:
         'Analyze Letterboxd film taste: sync, filter, search, statistics, AI recommendations, and movie/favorites export (JSON/CSV).',
     },

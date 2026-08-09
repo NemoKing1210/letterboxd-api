@@ -84,6 +84,18 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
         startedAt: new Date().toISOString(),
         finishedAt: new Date().toISOString(),
       })),
+      startBackgroundSync: vi.fn(async () => ({ syncId: 's1' })),
+      getSyncStatus: vi.fn(async () => ({
+        id: 's1',
+        userId: 'u1',
+        username: 'demo',
+        status: 'SUCCESS' as const,
+        startedAt: new Date(),
+        finishedAt: new Date(),
+        error: null,
+      })),
+      getLatestSync: vi.fn(),
+      getLatestRunningSync: vi.fn(),
     } as unknown as AppContainer['syncService'],
     usersService: {
       listUsers: vi.fn(async () => ({
@@ -108,17 +120,20 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
         totalPages: 1,
       })),
       getProfile: vi.fn(async () => ({
-        username: 'demo',
-        url: 'https://letterboxd.com/demo/',
-        moviesCount: 3,
-        averageRating: 4.2,
-        favoriteGenres: [{ name: 'sci-fi', count: 2 }],
-        lastSyncedAt: null,
-        followingCount: 1,
-        followersCount: 2,
-        externalLinks: [],
-        favoriteFilms: [],
-        recentLikes: [],
+        kind: 'ready' as const,
+        profile: {
+          username: 'demo',
+          url: 'https://letterboxd.com/demo/',
+          moviesCount: 3,
+          averageRating: 4.2,
+          favoriteGenres: [{ name: 'sci-fi', count: 2 }],
+          lastSyncedAt: null,
+          followingCount: 1,
+          followersCount: 2,
+          externalLinks: [],
+          favoriteFilms: [],
+          recentLikes: [],
+        },
       })),
     } as unknown as AppContainer['usersService'],
     moviesService: {
@@ -245,6 +260,28 @@ describe('API integration', () => {
     const body = (await res.json()) as { username: string; moviesCount: number };
     expect(body.username).toBe('demo');
     expect(body.moviesCount).toBe(3);
+  });
+
+  it('returns 202 when profile sync is in progress', async () => {
+    const container = createTestContainer({
+      usersService: {
+        getProfile: vi.fn(async () => ({
+          kind: 'syncing' as const,
+          syncId: 's-running',
+          username: 'newbie',
+          startedAt: '2026-08-10T00:00:00.000Z',
+          poll: '/api/users/newbie/sync/s-running',
+        })),
+        listUsers: vi.fn(),
+      } as unknown as AppContainer['usersService'],
+    });
+    const app = createApp(container);
+    const res = await app.request('/api/users/newbie');
+    expect(res.status).toBe(202);
+    const body = (await res.json()) as { status: string; syncId: string; poll: string };
+    expect(body.status).toBe('RUNNING');
+    expect(body.syncId).toBe('s-running');
+    expect(body.poll).toContain('/sync/s-running');
   });
 
   it('applies sparse fields on profile and movies list', async () => {

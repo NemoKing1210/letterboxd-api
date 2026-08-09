@@ -2,11 +2,13 @@ import type { User } from '@prisma/client';
 import type { SyncHistoryRepository, UserRepository } from '../../../infrastructure/database';
 import type { AppLogger } from '../../../infrastructure/logger';
 import { NotFoundError } from '../../../shared/errors/app-error';
-import { normalizeUsername } from '../../../shared/utils';
+import { normalizeUsername, scheduleBackground } from '../../../shared/utils';
 
 /** Narrow sync port so feature services do not depend on SynchronizationService concrete. */
 export type UserSyncTrigger = {
   syncLetterboxdUser(username: string): Promise<unknown>;
+  /** Start sync without awaiting completion; returns SyncHistory id. */
+  startBackgroundSync(username: string): Promise<{ syncId: string }>;
 };
 
 export type EnsureLocalUserDeps = {
@@ -24,8 +26,8 @@ export type EnsureLocalUserDeps = {
 
 /**
  * Resolve a local user, optionally triggering Letterboxd sync when missing or stale.
- * First request / refresh for a username may take longer (full scrape).
- * Stale refresh failures are logged and ignored so callers still get local data.
+ * Missing user: awaits a full scrape (first request is slow) unless callers use async first-sync.
+ * Stale user: kicks off a background refresh and returns local data immediately.
  */
 export async function ensureLocalUser(
   username: string,
@@ -44,18 +46,14 @@ export async function ensureLocalUser(
   }
 
   if (deps.userSyncTtlSeconds > 0 && (await isUserDataStale(normalized, deps))) {
-    try {
-      await deps.syncService.syncLetterboxdUser(normalized);
-      const refreshed = await deps.users.findByUsername(normalized);
-      if (refreshed) {
-        return refreshed;
-      }
-    } catch (error) {
-      deps.logger?.warn(
-        { err: error, username: normalized },
-        'Stale user sync failed; serving local data',
-      );
-    }
+    scheduleBackground(
+      deps.syncService.syncLetterboxdUser(normalized).catch((error) => {
+        deps.logger?.warn(
+          { err: error, username: normalized },
+          'Stale user sync failed; serving local data',
+        );
+      }),
+    );
   }
 
   return user;

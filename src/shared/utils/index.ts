@@ -26,6 +26,7 @@ export type { MovieDtoField } from './fields';
 export { createDeadline, resolveRequestBudgetMs } from './deadline';
 export type { Deadline } from './deadline';
 export { runWithDeadline, getRequestDeadline } from './request-deadline';
+export { scheduleBackground } from './background';
 
 /** True when response fields need film-page enrichment (or fields omitted → full DTO). */
 export function movieFieldsNeedEnrichment(fields: readonly string[] | undefined): boolean {
