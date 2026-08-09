@@ -1,3 +1,4 @@
+import { resolveProxyUrl, type ProxyEnvParts } from '../../app/config/proxy-url';
 import { ExternalServiceError } from '../../shared/errors/app-error';
 import { sleep } from '../../shared/utils';
 
@@ -5,12 +6,16 @@ export type HttpClientOptions = {
   timeoutMs: number;
   maxRetries?: number;
   userAgent?: string;
+  proxy?: ProxyEnvParts;
 };
+
+type FetchInitWithProxy = RequestInit & { proxy?: string };
 
 export class HttpClient {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
   private readonly userAgent: string;
+  private readonly proxy?: ProxyEnvParts;
 
   constructor(options: HttpClientOptions) {
     this.timeoutMs = options.timeoutMs;
@@ -18,6 +23,7 @@ export class HttpClient {
     this.userAgent =
       options.userAgent ??
       'LetterboxdIntelligenceAPI/1.0 (+https://github.com/letterboxd-intelligence-api; personal use)';
+    this.proxy = options.proxy;
   }
 
   async getText(url: string): Promise<string> {
@@ -28,13 +34,17 @@ export class HttpClient {
       const timer = setTimeout(() => controller.abort(), this.timeoutMs);
 
       try {
-        const response = await fetch(url, {
+        const proxyUrl = this.proxy ? resolveProxyUrl(url, this.proxy) : undefined;
+        const init: FetchInitWithProxy = {
           signal: controller.signal,
           headers: {
             'User-Agent': this.userAgent,
             Accept: 'text/html,application/xhtml+xml',
           },
-        });
+          ...(proxyUrl ? { proxy: proxyUrl } : {}),
+        };
+
+        const response = await fetch(url, init);
 
         if (response.status === 404) {
           throw new ExternalServiceError(`Resource not found: ${url}`, { status: 404 });

@@ -74,25 +74,28 @@ infrastructure implements ports
 
 Follow [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
 
+**Mandatory on every change:** whenever an agent lands code, docs, config, or other project changes, bump the version and document it in the same change set. Do not leave work without a version bump and changelog entry.
+
 | Change type | Bump | Examples |
 | --- | --- | --- |
 | Breaking API / schema / behavior | `MAJOR` | remove endpoint, change response shape |
 | New backward-compatible feature | `MINOR` | new endpoint, optional query param |
-| Bugfix, docs, chore, internal refactor | `PATCH` | scraper fix, typo, dependency bump |
+| Bug fix, docs, chore, internal refactor, small tweak | `PATCH` | scraper fix, typo, dependency bump, agent rule update (`1.0.0` → `1.0.1`) |
 
-When releasing or when the user asks for a version bump / release, update **all** of these in the same change:
+In the same change, update **all** of these:
 
 1. **`package.json`** → `"version"`
 2. **OpenAPI** → `info.version` in `src/app/server.ts` (must match `package.json`)
-3. **`CHANGELOG.md`** → new section under Keep a Changelog (`Added` / `Changed` / `Fixed` / `Removed`)
-4. **`docs/`** / **`README.md`** — if the release changes public behavior or setup
+3. **`CHANGELOG.md`** → new section under Keep a Changelog (`Added` / `Changed` / `Fixed` / `Removed`) describing what changed
+4. **`docs/`** / **`README.md`** — if the change affects public behavior or setup
 5. **`ROADMAP.md`** — only when a roadmap milestone is completed or deferred
 
 Rules:
 
 - Do not leave version strings out of sync across `package.json` and OpenAPI.
-- Do not bump the version for every tiny WIP commit unless the user requests a release.
-- Prefer documenting notable changes in `CHANGELOG.md` as they land when doing a release PR.
+- Small / local fixes → always `PATCH` (e.g. `1.0.0` → `1.0.1` → `1.0.2`).
+- New compatible capability → `MINOR`; breaking change → `MAJOR`.
+- Multiple related edits in one task may share a single bump; do not skip the bump entirely.
 - Tag format (when tagging is requested): `vX.Y.Z` matching `package.json`.
 
 ## Docs & repo hygiene
@@ -108,7 +111,8 @@ Rules:
 2. Prefer smallest change that satisfies the request — no drive-by refactors.
 3. Extend via ports (`MovieProvider`, `CacheProvider`, `RecommendationEngine`) instead of condition trees.
 4. Do not edit plan files or unrelated docs unless asked.
-5. Do not push, force-push, or amend unless the user explicitly requests it.
+5. Before finishing: bump `package.json` + OpenAPI `info.version`, and add a `CHANGELOG.md` entry (see **Versioning**).
+6. Do not push, force-push, or amend unless the user explicitly requests it.
 
 ## Out of scope unless requested
 

@@ -8,6 +8,7 @@ import {
   PrismaUserRepository,
   type PrismaClient,
 } from '../infrastructure/database';
+import { HttpClient } from '../infrastructure/http';
 import { LetterboxdScraperProvider, type MovieProvider } from '../infrastructure/letterboxd';
 import { createLogger, type AppLogger } from '../infrastructure/logger';
 import { SynchronizationService } from '../features/synchronization/service/synchronization-service';
@@ -49,6 +50,11 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
   const userMovies = new PrismaUserMovieRepository(prisma);
   const syncHistory = new PrismaSyncHistoryRepository(prisma);
 
+  const proxyConfigured = Boolean(env.HTTP_PROXY || env.HTTPS_PROXY);
+  if (proxyConfigured) {
+    logger.info({ proxyConfigured: true }, 'Outbound HTTP proxy configured');
+  }
+
   const movieProvider =
     overrides?.movieProvider ??
     new LetterboxdScraperProvider({
@@ -56,6 +62,14 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
       pageDelayMs: env.LETTERBOXD_PAGE_DELAY_MS,
       maxPages: env.LETTERBOXD_MAX_PAGES,
       logger,
+      httpClient: new HttpClient({
+        timeoutMs: env.LETTERBOXD_TIMEOUT,
+        proxy: {
+          httpProxy: env.HTTP_PROXY,
+          httpsProxy: env.HTTPS_PROXY,
+          noProxy: env.NO_PROXY,
+        },
+      }),
     });
 
   const syncService =

@@ -2,7 +2,7 @@ import { LETTERBOXD_BASE_URL } from '../../shared/constants';
 import { ExternalServiceError, NotFoundError } from '../../shared/errors/app-error';
 import { normalizeUsername, sleep } from '../../shared/utils';
 import type { AppLogger } from '../logger';
-import { HttpClient } from './http-client';
+import { HttpClient } from '../http';
 import type {
   LetterboxdDiaryEntry,
   LetterboxdFilm,

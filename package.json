@@ -1,6 +1,6 @@
 {
   "name": "letterboxd-intelligence-api",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Production-ready Letterboxd Intelligence API — analyze, filter, and understand film taste",
   "type": "module",
   "main": "dist/index.js",

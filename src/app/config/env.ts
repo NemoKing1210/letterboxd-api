@@ -1,6 +1,31 @@
 import { z } from 'zod';
 import { buildDatabaseUrl } from './database-url';
 
+const optionalProxyUrl = z
+  .string()
+  .optional()
+  .default('')
+  .superRefine((value, ctx) => {
+    const trimmed = value.trim();
+    if (!trimmed) {
+      return;
+    }
+    try {
+      const parsed = new URL(trimmed);
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Must be an http:// or https:// URL',
+        });
+      }
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Must be a valid proxy URL',
+      });
+    }
+  });
+
 const envSchema = z
   .object({
     DATABASE_URL: z.string().optional().default(''),
@@ -12,6 +37,9 @@ const envSchema = z
     DB_SCHEMA: z.string().optional().default('public'),
     SUPABASE_URL: z.string().optional().default(''),
     SUPABASE_KEY: z.string().optional().default(''),
+    HTTP_PROXY: optionalProxyUrl,
+    HTTPS_PROXY: optionalProxyUrl,
+    NO_PROXY: z.string().optional().default(''),
     LETTERBOXD_TIMEOUT: z.coerce.number().int().positive().default(15_000),
     LETTERBOXD_PAGE_DELAY_MS: z.coerce.number().int().nonnegative().default(500),
     LETTERBOXD_MAX_PAGES: z.coerce.number().int().positive().default(50),
@@ -48,6 +76,9 @@ const envSchema = z
     return {
       ...data,
       DATABASE_URL,
+      HTTP_PROXY: data.HTTP_PROXY.trim(),
+      HTTPS_PROXY: data.HTTPS_PROXY.trim(),
+      NO_PROXY: data.NO_PROXY.trim(),
     };
   });
 

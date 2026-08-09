@@ -95,6 +95,8 @@ bun run dev
 | `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `DB_SCHEMA` | Discrete PostgreSQL settings (OpenServer-friendly) |
 | `DATABASE_URL` | Optional full URL; if set, overrides `DB_*` |
 | `SUPABASE_URL` / `SUPABASE_KEY` | Optional Supabase credentials |
+| `HTTPS_PROXY` / `HTTP_PROXY` | Optional outbound proxy URL (`http://user:pass@host:port`) for Letterboxd and other external HTTP |
+| `NO_PROXY` | Comma-separated hosts that bypass the proxy |
 | `LETTERBOXD_TIMEOUT` | Scraper HTTP timeout (ms) |
 | `LETTERBOXD_PAGE_DELAY_MS` | Delay between scrape pages |
 | `LETTERBOXD_MAX_PAGES` | Max pages per list scrape |
