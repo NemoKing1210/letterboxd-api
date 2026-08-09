@@ -52,5 +52,8 @@ Husky runs lint-staged on pre-commit.
 - Prefer `POST /sync` intentionally; avoid hammering Letterboxd
 - Use fixtures under `tests/fixtures/letterboxd` for parser changes
 - Keep `LETTERBOXD_PAGE_DELAY_MS` ≥ 500 for real scrapes
+- On-demand enrichment uses `LETTERBOXD_ENRICH_CONCURRENCY` (default 4); only movies in the response are enriched and then flagged `Movie.enriched`
+- Movie list `limit` cannot exceed 100
+- Local Bun server uses `idleTimeout: 255` because first-page enrichment can exceed the default 10s request timeout
 - Scraper `HttpClient` sends navigation-like headers so Cloudflare is less likely to challenge requests; challenges are retried with backoff
 - Optional outbound proxy: set `HTTPS_PROXY` / `HTTP_PROXY` (and `NO_PROXY` if needed). Applies only to external HTTP (Letterboxd scrape, future APIs) — not to PostgreSQL/Prisma.

@@ -1,3 +1,5 @@
+import { LETTERBOXD_BASE_URL } from '../../../shared/constants';
+import { filmPageUrl } from '../../../shared/utils';
 import type { MovieDto } from '../schemas/movie-schemas';
 
 /** Minimal shape needed to project a user–movie row into the public MovieDto. */
@@ -17,11 +19,13 @@ export type MovieDtoSource = {
 };
 
 export function toMovieDto(entry: MovieDtoSource): MovieDto {
+  const slug = entry.movie.slug;
   return {
     id: entry.movie.id,
     title: entry.movie.title,
     year: entry.movie.year,
-    slug: entry.movie.slug,
+    slug,
+    url: slug ? filmPageUrl(slug, LETTERBOXD_BASE_URL) : null,
     poster: entry.movie.poster,
     genres: entry.movie.genres,
     director: entry.movie.director,

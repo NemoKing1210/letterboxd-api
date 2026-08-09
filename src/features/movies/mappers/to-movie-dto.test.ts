@@ -25,6 +25,7 @@ describe('toMovieDto', () => {
       title: 'Arrival',
       year: 2016,
       slug: 'arrival',
+      url: 'https://letterboxd.com/film/arrival/',
       poster: 'https://example.com/arrival.jpg',
       genres: ['sci-fi', 'drama'],
       director: 'Denis Villeneuve',
@@ -51,6 +52,7 @@ describe('toMovieDto', () => {
     });
 
     expect(dto.watchedDate).toBeNull();
+    expect(dto.url).toBeNull();
     expect(dto.genres).toEqual([]);
   });
 });

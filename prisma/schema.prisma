@@ -24,18 +24,21 @@ model User {
 }
 
 model Movie {
-  id       String      @id @default(cuid())
-  title    String
-  year     Int?
-  tmdbId   Int?
-  poster   String?
-  genres   String[]    @default([])
-  director String?
-  slug     String?     @unique
-  users    UserMovie[]
+  id        String      @id @default(cuid())
+  title     String
+  year      Int?
+  tmdbId    Int?
+  poster    String?
+  genres    String[]    @default([])
+  director  String?
+  slug      String?     @unique
+  /// Internal: film-page metadata has been fetched (not exposed in API)
+  enriched  Boolean     @default(false)
+  users     UserMovie[]
 
   @@index([year])
   @@index([director])
+  @@index([enriched])
 }
 
 model UserMovie {

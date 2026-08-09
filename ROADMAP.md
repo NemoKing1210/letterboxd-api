@@ -12,9 +12,10 @@
 
 ## v2 — Metadata enrichment
 
+- [x] Letterboxd film-page enrichment (genres / directors / posters / year-from-title)
+- [x] On-demand enrichment for API response items (`Movie.enriched`)
 - [ ] TMDB integration
-- [ ] Genres / cast / posters enrichment
-- [ ] Better search and faceted filters
+- [ ] Cast enrichment and richer search facets
 
 ## v3 — AI recommendations
 

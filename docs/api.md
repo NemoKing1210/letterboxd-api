@@ -40,6 +40,7 @@ Wherever the API returns a film (list item or nested in summaries), it uses the 
   "title": "Arrival",
   "year": 2016,
   "slug": "arrival",
+  "url": "https://letterboxd.com/film/arrival/",
   "poster": "https://...",
   "genres": ["sci-fi", "drama"],
   "director": "Denis Villeneuve",
@@ -62,10 +63,10 @@ Query params:
 | `ratingMin` / `ratingMax` | 0–5 |
 | `year` | Exact year |
 | `yearFrom` / `yearTo` | Range |
-| `genre` | Exact genre token (enriched in v2) |
+| `genre` | Exact genre token (lowercase; filled by Letterboxd film-page enrichment) |
 | `director` | Case-insensitive contains |
 | `sort` | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
-| `page` / `limit` | Pagination (`limit` max 100) |
+| `page` / `limit` | Pagination (`limit` max **100**) |
 
 Paginated response: `{ items: Movie[], page, limit, total, totalPages }`.
 
@@ -98,7 +99,7 @@ Favorite movies (liked or ≥ 4.5) as full `Movie` objects, plus directors, genr
 
 `POST /api/users/:username/sync`
 
-Forces a scrape + upsert cycle and returns sync metadata.
+Forces a Letterboxd list + diary scrape and upserts local rows. Film genres/directors/posters are **not** filled during sync — they are enriched on demand when those movies appear in API responses. Diary dates are best-effort.
 
 ### Recommendations
 

@@ -6,11 +6,19 @@ import { HttpClient } from '../http';
 import type {
   LetterboxdDiaryEntry,
   LetterboxdFilm,
+  LetterboxdFilmDetails,
   LetterboxdProfile,
   LetterboxdRating,
   MovieProvider,
 } from './movie-provider';
-import { parseFilmsPageHtml, parseHasNextPage, parseProfileHtml } from './parsers';
+import {
+  parseDiaryPageHtml,
+  parseFilmPageHtml,
+  parseFilmsPageHtml,
+  parseHasNextPage,
+  parsePosterJson,
+  parseProfileHtml,
+} from './parsers';
 
 export type LetterboxdScraperOptions = {
   timeoutMs: number;
@@ -59,16 +67,85 @@ export class LetterboxdScraperProvider implements MovieProvider {
   }
 
   async getDiary(username: string): Promise<LetterboxdDiaryEntry[]> {
-    const films = await this.paginateFilms(username, 'films/diary');
-    return films.map((f) => ({
-      ...f,
-      watchedDate: null,
-      review: null,
-    }));
+    const normalized = normalizeUsername(username);
+    const all: LetterboxdDiaryEntry[] = [];
+    const seen = new Set<string>();
+
+    for (let page = 1; page <= this.maxPages; page++) {
+      const url =
+        page === 1
+          ? `${LETTERBOXD_BASE_URL}/${normalized}/films/diary/`
+          : `${LETTERBOXD_BASE_URL}/${normalized}/films/diary/page/${page}/`;
+
+      try {
+        const html = await this.http.getText(url);
+        const entries = parseDiaryPageHtml(html);
+
+        for (const entry of entries) {
+          if (seen.has(entry.slug)) continue;
+          seen.add(entry.slug);
+          all.push(entry);
+        }
+
+        const hasNext = parseHasNextPage(html);
+        if (!hasNext || entries.length === 0) break;
+
+        await this.delayBetweenPages();
+      } catch (error) {
+        if (page === 1) {
+          this.logger.warn(
+            { err: error, username: normalized },
+            'Failed to scrape Letterboxd diary; continuing without watched dates',
+          );
+          return [];
+        }
+        this.logger.warn(
+          { err: error, username: normalized, page },
+          'Stopped diary pagination early',
+        );
+        break;
+      }
+    }
+
+    return all;
   }
 
   async getWatchlist(username: string): Promise<LetterboxdFilm[]> {
     return this.paginateFilms(username, 'watchlist');
+  }
+
+  async getFilmDetails(slug: string): Promise<LetterboxdFilmDetails> {
+    const normalizedSlug = slug.trim().toLowerCase();
+    const url = `${LETTERBOXD_BASE_URL}/film/${normalizedSlug}/`;
+
+    try {
+      const html = await this.http.getText(url);
+      const details = parseFilmPageHtml(html, normalizedSlug);
+
+      if (!details.poster) {
+        const poster = await this.fetchPosterUrl(normalizedSlug);
+        return { ...details, poster };
+      }
+
+      return details;
+    } catch (error) {
+      this.logger.error({ err: error, slug: normalizedSlug }, 'Failed to fetch Letterboxd film details');
+      if (error instanceof ExternalServiceError && (error.details as { status?: number })?.status === 404) {
+        throw new NotFoundError(`Letterboxd film "${normalizedSlug}" not found`);
+      }
+      throw error;
+    }
+  }
+
+  private async fetchPosterUrl(slug: string): Promise<string | null> {
+    const url = `${LETTERBOXD_BASE_URL}/film/${slug}/poster/std/150/`;
+    try {
+      const body = await this.http.getText(url);
+      return parsePosterJson(body);
+    } catch (error) {
+      this.logger.warn({ err: error, slug }, 'Failed to fetch Letterboxd poster JSON');
+      return null;
+    }
   }
 
   private async paginateFilms(username: string, path: string): Promise<LetterboxdFilm[]> {
@@ -95,9 +172,7 @@ export class LetterboxdScraperProvider implements MovieProvider {
         const hasNext = parseHasNextPage(html);
         if (!hasNext || films.length === 0) break;
 
-        if (this.pageDelayMs > 0) {
-          await sleep(this.pageDelayMs);
-        }
+        await this.delayBetweenPages();
       } catch (error) {
         if (page === 1) {
           this.logger.error({ err: error, username: normalized, path }, 'Failed to scrape Letterboxd films');
@@ -112,5 +187,11 @@ export class LetterboxdScraperProvider implements MovieProvider {
     }
 
     return all;
+  }
+
+  private async delayBetweenPages(): Promise<void> {
+    if (this.pageDelayMs > 0) {
+      await sleep(this.pageDelayMs);
+    }
   }
 }

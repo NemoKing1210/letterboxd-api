@@ -98,8 +98,9 @@ bun run dev
 | `HTTPS_PROXY` / `HTTP_PROXY` | Optional outbound proxy URL (`http://user:pass@host:port`) for Letterboxd and other external HTTP |
 | `NO_PROXY` | Comma-separated hosts that bypass the proxy |
 | `LETTERBOXD_TIMEOUT` | Scraper HTTP timeout (ms) |
-| `LETTERBOXD_PAGE_DELAY_MS` | Delay between scrape pages |
+| `LETTERBOXD_PAGE_DELAY_MS` | Delay between scrape list pages |
 | `LETTERBOXD_MAX_PAGES` | Max pages per list scrape |
+| `LETTERBOXD_ENRICH_CONCURRENCY` | Parallel on-demand film-page enrichments when serving responses |
 | `CACHE_TTL` | In-memory cache TTL (seconds) |
 | `RATE_LIMIT_*` | Per-IP rate limiting |
 | `CORS_ORIGIN` | Allowed origins (`*` or CSV) |
@@ -116,7 +117,7 @@ bun run dev
 | `GET` | `/api/users/:username/recommendations` | Rule-based recommendations |
 | `POST` | `/api/users/:username/sync` | Force Letterboxd sync |
 
-User-scoped `GET` endpoints auto-sync from Letterboxd when the user is missing locally (first request may be slow).
+User-scoped `GET` endpoints auto-sync from Letterboxd when the user is missing locally (first request may be slow). Sync imports the films list (year from titles, no placeholder posters) and diary watched dates. Genres, directors, and real posters are enriched on demand for movies returned by the API (tracked by internal `Movie.enriched`). Movie list `limit` max is 100. Movie responses include a Letterboxd `url`.
 
 Example:
 

@@ -7,6 +7,7 @@ import {
 } from '../../users/service/ensure-local-user';
 import { toMovieDto } from '../mappers/to-movie-dto';
 import type { MovieDto, MovieQuery } from '../schemas/movie-schemas';
+import type { FilmEnrichmentService } from './film-enrichment-service';
 
 export type { MovieDto };
 
@@ -14,6 +15,7 @@ export type MoviesServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
   syncService: UserSyncTrigger;
+  enrichment: FilmEnrichmentService;
   autoSyncIfMissing?: boolean;
 };
 
@@ -25,9 +27,10 @@ export class MoviesService {
     const user = await ensureLocalUser(normalized, this.deps);
 
     const { items, total } = await this.deps.userMovies.findFiltered(user.id, query);
+    const enriched = await this.deps.enrichment.enrichEntries(items);
 
     return createPaginatedResult(
-      items.map(toMovieDto),
+      enriched.map(toMovieDto),
       total,
       query.page,
       query.limit,

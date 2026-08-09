@@ -2,12 +2,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { SynchronizationService } from './synchronization-service';
 import type { LetterboxdFilm, LetterboxdProfile, MovieProvider } from '../../../infrastructure/letterboxd';
 import type { CacheProvider } from '../../../infrastructure/cache';
-import type {
-  MovieRepository,
-  SyncHistoryRepository,
-  UserMovieRepository,
-  UserRepository,
-} from '../../../infrastructure/database';
 import type { AppLogger } from '../../../infrastructure/logger';
 import type { Movie, SyncHistory, User, UserMovie } from '@prisma/client';
 
@@ -24,7 +18,7 @@ function createLogger(): AppLogger {
 }
 
 describe('SynchronizationService', () => {
-  it('syncs films into repositories', async () => {
+  it('syncs films into repositories without film-page enrichment', async () => {
     const films: LetterboxdFilm[] = [
       {
         slug: 'inception',
@@ -36,6 +30,7 @@ describe('SynchronizationService', () => {
       },
     ];
 
+    const getFilmDetails = vi.fn();
     const provider: MovieProvider = {
       getProfile: async (): Promise<LetterboxdProfile> => ({
         username: 'demo',
@@ -45,8 +40,15 @@ describe('SynchronizationService', () => {
       }),
       getMovies: async () => films,
       getRatings: async () => [],
-      getDiary: async () => [],
+      getDiary: async () => [
+        {
+          ...films[0]!,
+          watchedDate: '2024-06-01T00:00:00.000Z',
+          review: null,
+        },
+      ],
       getWatchlist: async () => [],
+      getFilmDetails,
     };
 
     const user: User = {
@@ -65,6 +67,7 @@ describe('SynchronizationService', () => {
       genres: [],
       director: null,
       slug: 'inception',
+      enriched: false,
     };
 
     const syncRecord: SyncHistory = {
@@ -77,55 +80,49 @@ describe('SynchronizationService', () => {
       error: null,
     };
 
-    const users: UserRepository = {
-      findByUsername: vi.fn(),
-      findByUsernameWithMovies: vi.fn(),
-      upsertByUsername: vi.fn(async () => user),
-    };
-
-    const movies: MovieRepository = {
-      upsertBySlug: vi.fn(async () => movie),
-    };
-
-    const userMovies: UserMovieRepository = {
-      upsert: vi.fn(async (): Promise<UserMovie> => ({
-        id: 'um1',
-        userId: user.id,
-        movieId: movie.id,
-        rating: 4.5,
-        favorite: true,
-        watchedDate: null,
-      })),
-      findFiltered: vi.fn(),
-      findAllForUser: vi.fn(),
-    };
-
-    const syncHistory: SyncHistoryRepository = {
-      create: vi.fn(async () => syncRecord),
-      update: vi.fn(async (_id, data) => ({
-        ...syncRecord,
-        ...data,
-        finishedAt: data.finishedAt ?? null,
-        status: data.status,
-      })),
-      findLatest: vi.fn(),
-    };
-
-    const cache: CacheProvider = {
-      get: vi.fn(),
-      set: vi.fn(),
-      delete: vi.fn(),
-      deleteByPrefix: vi.fn(),
-      clear: vi.fn(),
-    };
+    const upsertBySlug = vi.fn(async () => movie);
+    const upsertUserMovie = vi.fn(async (): Promise<UserMovie> => ({
+      id: 'um1',
+      userId: user.id,
+      movieId: movie.id,
+      rating: 4.5,
+      favorite: true,
+      watchedDate: new Date('2024-06-01T00:00:00.000Z'),
+    }));
 
     const service = new SynchronizationService({
       movieProvider: provider,
-      users,
-      movies,
-      userMovies,
-      syncHistory,
-      cache,
+      users: {
+        findByUsername: vi.fn(),
+        findByUsernameWithMovies: vi.fn(),
+        upsertByUsername: vi.fn(async () => user),
+      },
+      movies: {
+        findBySlugs: vi.fn(),
+        upsertBySlug,
+      },
+      userMovies: {
+        upsert: upsertUserMovie,
+        findFiltered: vi.fn(),
+        findAllForUser: vi.fn(),
+      },
+      syncHistory: {
+        create: vi.fn(async () => syncRecord),
+        update: vi.fn(async (_id, data) => ({
+          ...syncRecord,
+          ...data,
+          finishedAt: data.finishedAt ?? null,
+          status: data.status,
+        })),
+        findLatest: vi.fn(),
+      },
+      cache: {
+        get: vi.fn(),
+        set: vi.fn(),
+        delete: vi.fn(),
+        deleteByPrefix: vi.fn(),
+        clear: vi.fn(),
+      } satisfies CacheProvider,
       logger: createLogger(),
     });
 
@@ -133,8 +130,19 @@ describe('SynchronizationService', () => {
 
     expect(result.status).toBe('SUCCESS');
     expect(result.moviesSynced).toBe(1);
-    expect(movies.upsertBySlug).toHaveBeenCalledOnce();
-    expect(userMovies.upsert).toHaveBeenCalledOnce();
-    expect(cache.delete).toHaveBeenCalled();
+    expect(getFilmDetails).not.toHaveBeenCalled();
+    expect(upsertBySlug).toHaveBeenCalledWith({
+      slug: 'inception',
+      title: 'Inception',
+      year: 2010,
+      poster: null,
+    });
+    expect(upsertUserMovie).toHaveBeenCalledWith({
+      userId: 'u1',
+      movieId: 'm1',
+      rating: 4.5,
+      favorite: true,
+      watchedDate: new Date('2024-06-01T00:00:00.000Z'),
+    });
   });
 });

@@ -14,6 +14,7 @@ import { createLogger, type AppLogger } from '../infrastructure/logger';
 import { SynchronizationService } from '../features/synchronization/service/synchronization-service';
 import { UsersService } from '../features/users/service/users-service';
 import { MoviesService } from '../features/movies/service/movies-service';
+import { FilmEnrichmentService } from '../features/movies/service/film-enrichment-service';
 import { RatingsService } from '../features/ratings/service/ratings-service';
 import { FavoritesService } from '../features/favorites/service/favorites-service';
 import { StatisticsService } from '../features/statistics/service/statistics-service';
@@ -72,6 +73,13 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
       }),
     });
 
+  const enrichment = new FilmEnrichmentService({
+    movieProvider,
+    movies,
+    logger,
+    concurrency: env.LETTERBOXD_ENRICH_CONCURRENCY,
+  });
+
   const syncService =
     overrides?.syncService ??
     new SynchronizationService({
@@ -96,13 +104,14 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
     });
 
   const moviesService =
-    overrides?.moviesService ?? new MoviesService({ users, userMovies, syncService });
+    overrides?.moviesService ??
+    new MoviesService({ users, userMovies, syncService, enrichment });
   const ratingsService =
     overrides?.ratingsService ??
-    new RatingsService({ users, userMovies, syncService, cache, env });
+    new RatingsService({ users, userMovies, syncService, enrichment, cache, env });
   const favoritesService =
     overrides?.favoritesService ??
-    new FavoritesService({ users, userMovies, syncService, cache, env });
+    new FavoritesService({ users, userMovies, syncService, enrichment, cache, env });
   const statisticsService =
     overrides?.statisticsService ??
     new StatisticsService({ users, userMovies, syncService, cache, env });

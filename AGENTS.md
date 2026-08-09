@@ -41,7 +41,7 @@ infrastructure implements ports
 ## Letterboxd / scraping
 
 - Unofficial scraper — treat markup as unstable; keep parsers + HTML fixtures.
-- Never aggressive scraping: respect `LETTERBOXD_PAGE_DELAY_MS`, pagination caps.
+- Respect `LETTERBOXD_PAGE_DELAY_MS`, pagination caps (`MAX_LIMIT` = 100), and `LETTERBOXD_ENRICH_CONCURRENCY` for on-demand enrichment.
 - On scrape failure: mark `SyncHistory` as `FAILED`, log once with context, return typed error.
 - Do not commit live scraped dumps with PII beyond test fixtures.
 

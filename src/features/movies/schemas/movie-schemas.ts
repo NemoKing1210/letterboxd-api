@@ -9,6 +9,7 @@ export const movieDtoSchema = z.object({
   title: z.string(),
   year: z.number().nullable(),
   slug: z.string().nullable(),
+  url: z.string().url().nullable(),
   poster: z.string().nullable(),
   genres: z.array(z.string()),
   director: z.string().nullable(),

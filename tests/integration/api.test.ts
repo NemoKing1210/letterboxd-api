@@ -22,6 +22,7 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
     LETTERBOXD_TIMEOUT: 1000,
     LETTERBOXD_PAGE_DELAY_MS: 0,
     LETTERBOXD_MAX_PAGES: 1,
+    LETTERBOXD_ENRICH_CONCURRENCY: 1,
     CACHE_TTL: 60,
     PORT: 3000,
     NODE_ENV: 'test',

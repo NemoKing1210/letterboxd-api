@@ -5,10 +5,13 @@ import { CACHE_KEYS } from '../../../shared/constants';
 import { average, normalizeUsername } from '../../../shared/utils';
 import { toMovieDto } from '../../movies/mappers/to-movie-dto';
 import type { MovieDto } from '../../movies/schemas/movie-schemas';
+import type { FilmEnrichmentService } from '../../movies/service/film-enrichment-service';
 import {
   ensureLocalUser,
   type UserSyncTrigger,
 } from '../../users/service/ensure-local-user';
+
+const TOP_RATED_SLICE = 10;
 
 export type RatingsSummary = {
   averageRating: number | null;
@@ -22,6 +25,7 @@ export type RatingsServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
   syncService: UserSyncTrigger;
+  enrichment: FilmEnrichmentService;
   cache: CacheProvider;
   env: Env;
   autoSyncIfMissing?: boolean;
@@ -49,11 +53,17 @@ export class RatingsService {
       distribution[key] = (distribution[key] ?? 0) + 1;
     }
 
+    const best = rated.slice(0, TOP_RATED_SLICE);
+    const worst = [...rated].sort((a, b) => a.rating - b.rating).slice(0, TOP_RATED_SLICE);
+    const toEnrich = [...best, ...worst];
+    const enriched = await this.deps.enrichment.enrichEntries(toEnrich);
+    const byId = new Map(enriched.map((entry) => [entry.id, entry]));
+
     const summary: RatingsSummary = {
       averageRating: average(rated.map((r) => r.rating)),
       ratingsCount: rated.length,
-      bestMovies: rated.slice(0, 10).map(toMovieDto),
-      worstMovies: [...rated].sort((a, b) => a.rating - b.rating).slice(0, 10).map(toMovieDto),
+      bestMovies: best.map((entry) => toMovieDto(byId.get(entry.id) ?? entry)),
+      worstMovies: worst.map((entry) => toMovieDto(byId.get(entry.id) ?? entry)),
       distribution,
     };
 

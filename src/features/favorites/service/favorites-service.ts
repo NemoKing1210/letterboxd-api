@@ -1,14 +1,17 @@
 import type { CacheProvider } from '../../../infrastructure/cache';
 import type { UserMovieRepository, UserRepository } from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
-import { CACHE_KEYS } from '../../../shared/constants';
+import { CACHE_KEYS, MAX_LIMIT } from '../../../shared/constants';
 import { countBy, normalizeUsername, topN } from '../../../shared/utils';
 import { toMovieDto } from '../../movies/mappers/to-movie-dto';
 import type { MovieDto } from '../../movies/schemas/movie-schemas';
+import type { FilmEnrichmentService } from '../../movies/service/film-enrichment-service';
 import {
   ensureLocalUser,
   type UserSyncTrigger,
 } from '../../users/service/ensure-local-user';
+
+const MAX_FAVORITE_MOVIES = 20;
 
 export type FavoritesSummary = {
   favoriteMovies: MovieDto[];
@@ -21,6 +24,7 @@ export type FavoritesServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
   syncService: UserSyncTrigger;
+  enrichment: FilmEnrichmentService;
   cache: CacheProvider;
   env: Env;
   autoSyncIfMissing?: boolean;
@@ -47,11 +51,14 @@ export class FavoritesService {
       }
     }
 
+    const topFavorites = liked
+      .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+      .slice(0, Math.min(MAX_FAVORITE_MOVIES, MAX_LIMIT));
+
+    const enrichedFavorites = await this.deps.enrichment.enrichEntries(topFavorites);
+
     const summary: FavoritesSummary = {
-      favoriteMovies: liked
-        .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-        .slice(0, 20)
-        .map(toMovieDto),
+      favoriteMovies: enrichedFavorites.map(toMovieDto),
       favoriteDirectors: topN(countBy(liked, (e) => e.movie.director), 10),
       favoriteGenres: topN(genreCounts, 10),
       favoriteYears: topN(

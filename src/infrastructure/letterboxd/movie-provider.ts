@@ -14,6 +14,15 @@ export type LetterboxdFilm = {
   liked: boolean;
 };
 
+export type LetterboxdFilmDetails = {
+  slug: string;
+  title: string;
+  year: number | null;
+  poster: string | null;
+  genres: string[];
+  director: string | null;
+};
+
 export type LetterboxdRating = LetterboxdFilm & {
   rating: number;
 };
@@ -29,4 +38,5 @@ export interface MovieProvider {
   getRatings(username: string): Promise<LetterboxdRating[]>;
   getDiary(username: string): Promise<LetterboxdDiaryEntry[]>;
   getWatchlist(username: string): Promise<LetterboxdFilm[]>;
+  getFilmDetails(slug: string): Promise<LetterboxdFilmDetails>;
 }

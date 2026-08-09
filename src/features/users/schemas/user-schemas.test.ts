@@ -28,4 +28,8 @@ describe('user schemas', () => {
     expect(query.yearFrom).toBe(2000);
     expect(query.genre).toBe('sci-fi');
   });
+
+  it('rejects movie list limits above 100', () => {
+    expect(() => movieQuerySchema.parse({ limit: '101' })).toThrow();
+  });
 });

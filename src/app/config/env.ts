@@ -43,6 +43,7 @@ const envSchema = z
     LETTERBOXD_TIMEOUT: z.coerce.number().int().positive().default(15_000),
     LETTERBOXD_PAGE_DELAY_MS: z.coerce.number().int().nonnegative().default(500),
     LETTERBOXD_MAX_PAGES: z.coerce.number().int().positive().default(50),
+    LETTERBOXD_ENRICH_CONCURRENCY: z.coerce.number().int().positive().default(4),
     CACHE_TTL: z.coerce.number().int().positive().default(300),
     PORT: z.coerce.number().int().positive().default(3000),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),

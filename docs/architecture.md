@@ -45,15 +45,16 @@ sequenceDiagram
   Client->>API: GET /api/users/:username/... (user missing locally)
   API->>Sync: syncLetterboxdUser (lazy)
   Sync->>DB: create SyncHistory RUNNING
-  Sync->>LB: getProfile + getMovies
-  LB-->>Sync: films
+  Sync->>LB: getProfile + getMovies + getDiary
+  LB-->>Sync: films + diary dates
   Sync->>DB: upsert User / Movie / UserMovie
   Sync->>DB: update SyncHistory SUCCESS
   Sync->>Cache: invalidate user keys
   Sync-->>API: SyncResponse
   API-->>Client: 200 JSON (requested resource)
 
-  Note over Client,Cache: POST /api/users/:username/sync forces the same scrape cycle explicitly
+  Note over Client,Cache: GET /movies enriches only unenriched items in the page (Movie.enriched)
+  Note over Client,Cache: POST /api/users/:username/sync forces the scrape cycle explicitly
 ```
 
 ## Extension points

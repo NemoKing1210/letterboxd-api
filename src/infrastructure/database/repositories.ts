@@ -1,4 +1,6 @@
 import type { Movie, Prisma, PrismaClient, SyncHistory, SyncStatus, User, UserMovie } from '@prisma/client';
+import { MAX_LIMIT } from '../../shared/constants';
+import { clamp } from '../../shared/utils';
 
 export type UserWithMovies = User & {
   movies: Array<UserMovie & { movie: Movie }>;
@@ -24,6 +26,7 @@ export interface UserRepository {
 }
 
 export interface MovieRepository {
+  findBySlugs(slugs: string[]): Promise<Map<string, Movie>>;
   upsertBySlug(data: {
     slug: string;
     title: string;
@@ -31,6 +34,7 @@ export interface MovieRepository {
     poster: string | null;
     genres?: string[];
     director?: string | null;
+    enriched?: boolean;
   }): Promise<Movie>;
 }
 
@@ -82,6 +86,25 @@ export class PrismaUserRepository implements UserRepository {
 export class PrismaMovieRepository implements MovieRepository {
   constructor(private readonly prisma: PrismaClient) {}
 
+  async findBySlugs(slugs: string[]): Promise<Map<string, Movie>> {
+    const unique = [...new Set(slugs.filter(Boolean))];
+    if (unique.length === 0) {
+      return new Map();
+    }
+
+    const rows = await this.prisma.movie.findMany({
+      where: { slug: { in: unique } },
+    });
+
+    const map = new Map<string, Movie>();
+    for (const row of rows) {
+      if (row.slug) {
+        map.set(row.slug, row);
+      }
+    }
+    return map;
+  }
+
   upsertBySlug(data: {
     slug: string;
     title: string;
@@ -89,7 +112,9 @@ export class PrismaMovieRepository implements MovieRepository {
     poster: string | null;
     genres?: string[];
     director?: string | null;
+    enriched?: boolean;
   }): Promise<Movie> {
+    const genres = data.genres ?? [];
     return this.prisma.movie.upsert({
       where: { slug: data.slug },
       create: {
@@ -97,15 +122,17 @@ export class PrismaMovieRepository implements MovieRepository {
         title: data.title,
         year: data.year,
         poster: data.poster,
-        genres: data.genres ?? [],
+        genres,
         director: data.director ?? null,
+        enriched: data.enriched ?? false,
       },
       update: {
         title: data.title,
-        year: data.year ?? undefined,
-        poster: data.poster ?? undefined,
-        genres: data.genres,
-        director: data.director ?? undefined,
+        ...(data.year !== null ? { year: data.year } : {}),
+        ...(data.poster !== null ? { poster: data.poster } : {}),
+        ...(genres.length > 0 ? { genres } : {}),
+        ...(data.director ? { director: data.director } : {}),
+        ...(data.enriched === true ? { enriched: true } : {}),
       },
     });
   }
@@ -132,7 +159,7 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
       update: {
         rating: data.rating,
         favorite: data.favorite,
-        watchedDate: data.watchedDate,
+        ...(data.watchedDate !== null ? { watchedDate: data.watchedDate } : {}),
       },
     });
   }
@@ -171,14 +198,16 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
     };
 
     const orderBy = this.buildOrderBy(filters.sort);
+    const limit = clamp(filters.limit, 1, MAX_LIMIT);
+    const page = Math.max(1, filters.page);
     const [total, items] = await Promise.all([
       this.prisma.userMovie.count({ where }),
       this.prisma.userMovie.findMany({
         where,
         include: { movie: true },
         orderBy,
-        skip: (filters.page - 1) * filters.limit,
-        take: filters.limit,
+        skip: (page - 1) * limit,
+        take: limit,
       }),
     ]);
 

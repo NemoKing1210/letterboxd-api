@@ -1,12 +1,18 @@
-import type { SyncHistoryRepository, MovieRepository, UserMovieRepository, UserRepository } from '../../../infrastructure/database';
+import type {
+  SyncHistoryRepository,
+  MovieRepository,
+  UserMovieRepository,
+  UserRepository,
+} from '../../../infrastructure/database';
 import type { CacheProvider } from '../../../infrastructure/cache';
-import type { MovieProvider } from '../../../infrastructure/letterboxd';
+import type { LetterboxdDiaryEntry, MovieProvider } from '../../../infrastructure/letterboxd';
 import type { AppLogger } from '../../../infrastructure/logger';
 import { CACHE_KEYS, SYNC_STATUS } from '../../../shared/constants';
 import { AppError } from '../../../shared/errors/app-error';
 import { normalizeUsername } from '../../../shared/utils';
 import { letterboxdFilmSchema } from '../schemas/sync-schemas';
 import type { SyncResponse } from '../schemas/sync-schemas';
+import { realPoster } from './merge-film-metadata';
 
 export type SynchronizationServiceDeps = {
   movieProvider: MovieProvider;
@@ -33,6 +39,7 @@ export class SynchronizationService {
     try {
       await this.deps.movieProvider.getProfile(normalized);
       const films = await this.deps.movieProvider.getMovies(normalized);
+      const watchedBySlug = await this.loadWatchedDates(normalized);
 
       const user = await this.deps.users.upsertByUsername(normalized);
       let moviesSynced = 0;
@@ -52,15 +59,16 @@ export class SynchronizationService {
           slug: film.slug,
           title: film.title,
           year: film.year,
-          poster: film.poster,
+          poster: realPoster(film.poster),
         });
 
+        const watchedDateRaw = watchedBySlug.get(film.slug) ?? null;
         await this.deps.userMovies.upsert({
           userId: user.id,
           movieId: movie.id,
           rating: film.rating,
           favorite: film.liked,
-          watchedDate: null,
+          watchedDate: watchedDateRaw ? new Date(watchedDateRaw) : null,
         });
 
         moviesSynced += 1;
@@ -112,6 +120,16 @@ export class SynchronizationService {
     }
   }
 
+  private async loadWatchedDates(username: string): Promise<Map<string, string>> {
+    try {
+      const diary = await this.deps.movieProvider.getDiary(username);
+      return diaryDatesBySlug(diary);
+    } catch (error) {
+      this.deps.logger.warn({ err: error, username }, 'Diary scrape failed; continuing without watched dates');
+      return new Map();
+    }
+  }
+
   private async invalidateUserCache(username: string): Promise<void> {
     await Promise.all([
       this.deps.cache.delete(CACHE_KEYS.userProfile(username)),
@@ -120,4 +138,13 @@ export class SynchronizationService {
       this.deps.cache.delete(CACHE_KEYS.userFavorites(username)),
     ]);
   }
+}
+
+function diaryDatesBySlug(diary: LetterboxdDiaryEntry[]): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const entry of diary) {
+    if (!entry.watchedDate || map.has(entry.slug)) continue;
+    map.set(entry.slug, entry.watchedDate);
+  }
+  return map;
 }
