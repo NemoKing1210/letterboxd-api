@@ -52,7 +52,7 @@ Full local setup: **[DEVELOPMENT.md](DEVELOPMENT.md)**. Production: **[Supabase]
 | --- | --- |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | Local setup, env, scripts, Bruno |
 | [docs/supabase.md](docs/supabase.md) | Create Supabase Postgres, pgvector, migrations |
-| [docs/vercel.md](docs/vercel.md) | Deploy the API on Vercel |
+| [docs/vercel.md](docs/vercel.md) | Deploy on Vercel (fast path, CI, env) |
 | [docs/architecture.md](docs/architecture.md) | Layers, sync flow, extension points |
 | [docs/api.md](docs/api.md) | REST endpoints, query params, errors |
 | [docs/database.md](docs/database.md) | Prisma models, ER diagram, migrations |

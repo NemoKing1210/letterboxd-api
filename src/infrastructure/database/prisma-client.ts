@@ -2,6 +2,10 @@ import { PrismaClient } from '@prisma/client';
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
+/**
+ * Reuse one PrismaClient across warm serverless invocations (Vercel).
+ * Without this, each cold path can open extra connections under load.
+ */
 export function createPrismaClient(): PrismaClient {
   const client =
     globalForPrisma.prisma ??
@@ -9,10 +13,7 @@ export function createPrismaClient(): PrismaClient {
       log: process.env.NODE_ENV === 'development' ? ['error', 'warn'] : ['error'],
     });
 
-  if (process.env.NODE_ENV !== 'production') {
-    globalForPrisma.prisma = client;
-  }
-
+  globalForPrisma.prisma = client;
   return client;
 }
 

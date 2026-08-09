@@ -1,6 +1,6 @@
 {
   "name": "letterboxd-api",
-  "version": "3.2.3",
+  "version": "3.2.4",
   "description": "Production-ready Letterboxd API — analyze, filter, and understand film taste",
   "type": "module",
   "main": "dist/index.js",
@@ -21,6 +21,11 @@
     "db:migrate:deploy": "bun run scripts/run-prisma.ts migrate deploy",
     "db:studio": "bun run scripts/run-prisma.ts studio",
     "db:push": "bun run scripts/run-prisma.ts db push",
+    "postinstall": "prisma generate",
+    "setup:vercel": "bun run scripts/setup-vercel.ts",
+    "vercel:dev": "vercel dev",
+    "vercel:env": "vercel env pull .env.local --yes",
+    "deploy": "vercel --prod",
     "prepare": "husky"
   },
   "keywords": [

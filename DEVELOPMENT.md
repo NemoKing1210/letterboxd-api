@@ -101,6 +101,10 @@ bun run format        # prettier
 bun run format:check  # prettier check
 bun run build         # bun build
 bun run db:studio     # prisma studio
+bun run setup:vercel  # link project + pull .env.local
+bun run vercel:dev    # local server shaped like Vercel
+bun run vercel:env    # vercel env pull .env.local
+bun run deploy        # vercel --prod
 ```
 
 ## Quality checks
@@ -171,6 +175,6 @@ These stay public when auth is enabled (default `AUTH_PUBLIC_PATHS`). Full Custo
 Step-by-step production guides:
 
 1. **[docs/supabase.md](docs/supabase.md)** — create the project, enable pgvector, get connection strings, run migrations
-2. **[docs/vercel.md](docs/vercel.md)** — import the repo, set env vars, deploy, verify
+2. **[docs/vercel.md](docs/vercel.md)** — fast path (`setup:vercel` / `deploy`), env, CI secrets, verify
 
-Entrypoint on Vercel: [`api/index.ts`](api/index.ts) (see [`vercel.json`](vercel.json)).
+Entrypoint on Vercel: [`api/index.ts`](api/index.ts) (see [`vercel.json`](vercel.json)). Minimal production env: [`.env.vercel.example`](.env.vercel.example).

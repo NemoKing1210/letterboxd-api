@@ -9,7 +9,7 @@ Browser / ChatGPT / Bruno
         │ HTTPS
         ▼
    Vercel (api/index.ts → Hono)
-        │ DATABASE_URL
+        │ DATABASE_URL (pooler)
         ▼
    PostgreSQL (e.g. Supabase)
 ```
@@ -18,25 +18,63 @@ Browser / ChatGPT / Bruno
 
 | Item | Why |
 | --- | --- |
-| GitHub/GitLab/Bitbucket repo with this project | Vercel deploys from Git |
+| GitHub/GitLab/Bitbucket repo with this project | Vercel deploys from Git (and/or GitHub Actions) |
 | [Vercel](https://vercel.com/) account | Hosting |
-| Working `DATABASE_URL` | Prisma cannot start without Postgres |
+| Working `DATABASE_URL` (pooler) | Prisma cannot start without Postgres |
 | Migrations already applied on that DB | Empty DB → runtime errors |
 | (Recommended) auth secrets | Do not leave production open |
 
 Entrypoint already configured:
 
 - [`api/index.ts`](../api/index.ts) — Hono adapter for Vercel
-- [`vercel.json`](../vercel.json) — routes everything to that file
+- [`vercel.json`](../vercel.json) — rewrites, `maxDuration`, Prisma generate on build
+
+Minimal env list for the dashboard: [`.env.vercel.example`](../.env.vercel.example).
+
+## Fast path (recommended)
+
+```bash
+# 1. One-time: CLI + link + pull env (after vars exist in the Vercel project)
+bun add -g vercel   # or: npm i -g vercel
+bun run setup:vercel
+
+# 2. Migrations against the *direct* URL (not the pooler)
+#    Windows PowerShell: $env:DATABASE_URL="postgresql://..."
+export DATABASE_URL="postgresql://...direct..."
+bun run db:migrate:deploy
+
+# 3. Local check against the Vercel runtime shape
+bun run vercel:dev
+
+# 4. Production deploy
+bun run deploy
+```
+
+`bun run setup:vercel` runs `vercel link` (if needed) and `vercel env pull .env.local`.
+
+### GitHub Actions (optional)
+
+On push to `main`, CI can migrate + deploy when these repository secrets exist:
+
+| Secret | Value |
+| --- | --- |
+| `VERCEL_TOKEN` | [Vercel token](https://vercel.com/account/tokens) |
+| `VERCEL_ORG_ID` | From `.vercel/project.json` after `vercel link` |
+| `VERCEL_PROJECT_ID` | Same file |
+| `DATABASE_URL_DIRECT` | Supabase **direct** URL (migrations only) |
+
+Without those secrets, the migrate/deploy jobs no-op so forks stay green.
+
+You can still use Vercel’s native Git integration instead of (or in addition to) the Actions deploy job — avoid double-deploying production from both.
 
 ## 1. Prepare the database
 
 1. Create a Postgres project ([Supabase](supabase.md) or other).
-2. Apply migrations from your machine:
+2. Apply migrations from your machine (or CI with `DATABASE_URL_DIRECT`):
 
 ```bash
 # Use the direct (non-pooler) URL for migrations — see Supabase guide
-set DATABASE_URL=postgresql://...
+export DATABASE_URL=postgresql://...
 bun run db:migrate:deploy
 ```
 
@@ -46,25 +84,33 @@ bun run db:migrate:deploy
 
 1. Open [vercel.com/new](https://vercel.com/new).
 2. **Import** this Git repository.
-3. Framework preset: leave default / Other — `vercel.json` defines the build.
+3. Framework preset: Other / no framework — `vercel.json` defines rewrites and the build.
 4. Root directory: repository root (where `vercel.json` lives).
-5. Do **not** set a custom build command unless you know you need one — Vercel uses `@vercel/node` on `api/index.ts`.
+5. Build command is already `bun run db:generate` via `vercel.json` (Prisma client). Override only if you know you need to.
 6. Click **Deploy** only after you add env vars (next section). If you already deployed once without env, add vars and **Redeploy**.
 
-### CLI alternative
+Optional: install the [Supabase integration](https://vercel.com/integrations/supabase) so `DATABASE_URL` is injected for you — still prefer the **pooler** URL for the app runtime.
 
-```bash
-npm i -g vercel
-vercel login
-vercel link
-vercel env add DATABASE_URL
-# …add other vars the same way
-vercel --prod
+### Region (latency)
+
+Pin the function region next to your Supabase project in `vercel.json` when you know it, for example:
+
+```json
+"regions": ["fra1"]
 ```
+
+Common codes: `fra1` (Frankfurt), `iad1` (Washington), `sfo1` (San Francisco). Match [Supabase project region](https://supabase.com/docs/guides/platform/regions).
 
 ## 3. Environment variables
 
-In the Vercel project: **Settings → Environment Variables**. Add them for **Production** (and Preview if you use preview deploys).
+In the Vercel project: **Settings → Environment Variables**. Add them for **Production** (and Preview if you use preview deploys). Start from [`.env.vercel.example`](../.env.vercel.example).
+
+After the first save, pull locally anytime:
+
+```bash
+bun run vercel:env
+# or: bun run setup:vercel
+```
 
 ### Required
 
@@ -115,7 +161,7 @@ After saving variables, trigger a **Redeploy** so the new env is applied.
 
 ## 4. Deploy and verify
 
-1. Deploy (Git push to the linked branch, or **Deployments → Redeploy**).
+1. Deploy (`bun run deploy`, Git push to the linked branch, or **Deployments → Redeploy**).
 2. Open your URL, for example `https://your-project.vercel.app`.
 3. Check:
 
@@ -134,7 +180,7 @@ Expected: health returns OK JSON; `/docs` loads; user routes work after DB + syn
 
 ### First sync warning
 
-`POST /api/users/:username/sync` (and first `GET` that triggers sync) scrapes Letterboxd and can take a long time. On Vercel Hobby, functions have a short max duration — large profiles may time out.
+`POST /api/users/:username/sync` (and first `GET` that triggers sync) scrapes Letterboxd and can take a long time. `vercel.json` sets `maxDuration` to **60s** (requires [Pro](https://vercel.com/docs/functions/configuring-functions/duration) or higher). On Hobby the platform caps lower — large profiles may still time out.
 
 Practical tips:
 
@@ -142,16 +188,19 @@ Practical tips:
 - Prefer Pro / higher function limits if you sync large libraries in one request.
 - Rely on `USER_SYNC_TTL_SECONDS` so day-to-day reads are fast after the first successful sync.
 - Watch **Vercel → Deployments → Functions / Logs** for timeouts and Prisma errors.
+- For Hobby, lower `functions.api/index.ts.maxDuration` in `vercel.json` to your plan limit (e.g. `10`) so deploys do not fail validation.
 
 ## 5. Production checklist
 
 - [ ] Migrations applied on the production database
 - [ ] `DATABASE_URL` points at the pooler (runtime) and works from Vercel’s region
+- [ ] Optional: `regions` in `vercel.json` matches Supabase
 - [ ] `AUTH_ENABLED=true` and a strong `AUTH_TOKENS` value
 - [ ] `/health`, `/privacy`, `/openapi-gpt-actions.yaml` stay public via `AUTH_PUBLIC_PATHS`
 - [ ] `curl /health` succeeds
 - [ ] Authenticated `GET /api/users/...` succeeds
 - [ ] (Optional) `OPENAI_API_KEY` set and pgvector migration applied for AI recommendations
+- [ ] (Optional) GitHub secrets for Actions migrate/deploy
 
 ## 6. Connect ChatGPT (optional)
 
@@ -167,8 +216,8 @@ Use:
 
 ## 7. Updates and rollbacks
 
-- **Update:** push to the production branch → Vercel rebuilds.
-- **Env change:** edit variables → **Redeploy** (env alone does not restart old deployments).
+- **Update:** push to the production branch → Vercel rebuilds (and Actions deploy if secrets are set).
+- **Env change:** edit variables → **Redeploy** (env alone does not restart old deployments). Pull locally with `bun run vercel:env`.
 - **Rollback:** Deployments → previous deployment → **Promote to Production**.
 
 ## Troubleshooting
@@ -176,15 +225,17 @@ Use:
 | Symptom | What to check |
 | --- | --- |
 | `500` / Prisma “Can’t reach database” | `DATABASE_URL`, password URL-encoding, use pooler for serverless, IP allowlist (Supabase: allow all / Vercel egress) |
-| Deploy OK but empty schema errors | Run `bun run db:migrate:deploy` against that DB |
+| Deploy OK but empty schema errors | Run `bun run db:migrate:deploy` against that DB (direct URL) |
 | `401 UNAUTHORIZED` | `AUTH_ENABLED`, `AUTH_TOKENS`, request header `X-API-Key` |
-| Sync / enrichment timeout | Function duration limits; reduce enrichment concurrency; sync a smaller user first |
-| `/docs` or GPT schema 404 | Confirm `vercel.json` routes and that `docs/chatgpt-actions.yaml` is included (`includeFiles` in `vercel.json`) |
-| Cold starts feel slow | Normal for serverless + Prisma; warm with `/health` after deploy |
+| Sync / enrichment timeout | Function `maxDuration` / plan limits; reduce enrichment concurrency; sync a smaller user first |
+| Deploy fails on `maxDuration` | Hobby plan — set `maxDuration` to `10` in `vercel.json` |
+| `/docs` or GPT schema 404 | Confirm `vercel.json` rewrites and that `docs/chatgpt-actions.yaml` is included (`includeFiles`) |
+| Cold starts feel slow | Normal for serverless + Prisma; pin `regions`; warm with `/health` after deploy |
+| `vercel build` / Prisma client missing | `buildCommand` runs `bun run db:generate`; `postinstall` also generates the client |
 
 ## Related docs
 
 - [Supabase setup](supabase.md) — project, pgvector, connection strings, migrations
-- [DEVELOPMENT.md](../DEVELOPMENT.md) — local env reference
+- [DEVELOPMENT.md](../DEVELOPMENT.md) — local env reference and scripts
 - [api.md](api.md) — endpoints and auth behavior
 - [chatgpt-actions.md](chatgpt-actions.md) — Custom GPT
