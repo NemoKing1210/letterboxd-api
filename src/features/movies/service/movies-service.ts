@@ -1,4 +1,9 @@
-import type { UserMovieRepository, UserRepository } from '../../../infrastructure/database';
+import type {
+  SyncHistoryRepository,
+  UserMovieRepository,
+  UserRepository,
+} from '../../../infrastructure/database';
+import type { AppLogger } from '../../../infrastructure/logger';
 import { createPaginatedResult, type PaginatedResult } from '../../../shared/types';
 import { normalizeUsername } from '../../../shared/utils';
 import {
@@ -14,8 +19,11 @@ export type { MovieDto };
 export type MoviesServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
+  syncHistory: SyncHistoryRepository;
   syncService: UserSyncTrigger;
   enrichment: FilmEnrichmentService;
+  logger: AppLogger;
+  userSyncTtlSeconds: number;
   autoSyncIfMissing?: boolean;
 };
 

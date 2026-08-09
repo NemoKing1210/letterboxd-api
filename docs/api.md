@@ -14,7 +14,7 @@ Interactive docs: `GET /docs` (Swagger UI). Spec: `GET /openapi.json`.
 
 ### Lazy sync
 
-All user-scoped `GET` endpoints below auto-sync from Letterboxd when the username is not in the local database yet. The first request may take longer (full scrape); later requests use stored data. Use `POST .../sync` to force a refresh.
+All user-scoped `GET` endpoints below auto-sync from Letterboxd when the username is not in the local database yet, or when the last successful sync is older than `USER_SYNC_TTL_SECONDS` (default 12 hours; `0` disables stale refresh only). The first request / refresh may take longer (full scrape). If a stale refresh fails, the API serves existing local data. Use `POST .../sync` to force a refresh.
 
 ### User profile
 

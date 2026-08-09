@@ -130,6 +130,7 @@ describe('SynchronizationService', () => {
           status: data.status,
         })),
         findLatest: vi.fn(),
+        findLatestSuccessful: vi.fn(),
       },
       cache: {
         get: vi.fn(),
@@ -160,5 +161,93 @@ describe('SynchronizationService', () => {
       favorite: true,
       watchedDate: new Date('2024-06-01T00:00:00.000Z'),
     });
+  });
+
+  it('dedupes concurrent syncs for the same username', async () => {
+    let resolveProfile!: (value: LetterboxdProfile) => void;
+    const profilePromise = new Promise<LetterboxdProfile>((resolve) => {
+      resolveProfile = resolve;
+    });
+    const getProfile = vi.fn(() => profilePromise);
+
+    const provider: MovieProvider = {
+      getProfile,
+      getMovies: async () => [],
+      getRatings: async () => [],
+      getDiary: async () => [],
+      getWatchlist: async () => [],
+      getFilmDetails: vi.fn(),
+    };
+
+    const user: User = {
+      id: 'u1',
+      username: 'demo',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    const syncRecord: SyncHistory = {
+      id: 's1',
+      userId: null,
+      username: 'demo',
+      status: 'RUNNING',
+      startedAt: new Date('2024-01-01T00:00:00.000Z'),
+      finishedAt: null,
+      error: null,
+    };
+
+    const create = vi.fn(async () => syncRecord);
+    const service = new SynchronizationService({
+      movieProvider: provider,
+      users: {
+        findByUsername: vi.fn(),
+        findByUsernameWithMovies: vi.fn(),
+        upsertByUsername: vi.fn(async () => user),
+      },
+      movies: {
+        findBySlugs: vi.fn(),
+        upsertBySlug: vi.fn(),
+      },
+      userMovies: {
+        upsert: vi.fn(),
+        findFiltered: vi.fn(),
+        findAllForUser: vi.fn(),
+      },
+      syncHistory: {
+        create,
+        update: vi.fn(async (_id, data) => ({
+          ...syncRecord,
+          ...data,
+          finishedAt: data.finishedAt ?? null,
+          status: data.status,
+        })),
+        findLatest: vi.fn(),
+        findLatestSuccessful: vi.fn(),
+      },
+      cache: {
+        get: vi.fn(),
+        set: vi.fn(),
+        delete: vi.fn(),
+        deleteByPrefix: vi.fn(),
+        clear: vi.fn(),
+      } satisfies CacheProvider,
+      logger: createLogger(),
+    });
+
+    const first = service.syncLetterboxdUser('Demo');
+    const second = service.syncLetterboxdUser('demo');
+
+    resolveProfile({
+      username: 'demo',
+      displayName: 'Demo',
+      filmsCount: 0,
+      bio: null,
+    });
+
+    const [a, b] = await Promise.all([first, second]);
+
+    expect(a.syncId).toBe(b.syncId);
+    expect(create).toHaveBeenCalledTimes(1);
+    expect(getProfile).toHaveBeenCalledTimes(1);
   });
 });

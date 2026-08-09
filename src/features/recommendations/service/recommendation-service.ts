@@ -1,4 +1,9 @@
-import type { UserMovieRepository, UserRepository } from '../../../infrastructure/database';
+import type {
+  SyncHistoryRepository,
+  UserMovieRepository,
+  UserRepository,
+} from '../../../infrastructure/database';
+import type { AppLogger } from '../../../infrastructure/logger';
 import { countBy, normalizeUsername, topN } from '../../../shared/utils';
 import {
   ensureLocalUser,
@@ -13,7 +18,10 @@ import type {
 export type RuleBasedRecommendationEngineDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
+  syncHistory: SyncHistoryRepository;
   syncService: UserSyncTrigger;
+  logger: AppLogger;
+  userSyncTtlSeconds: number;
   autoSyncIfMissing?: boolean;
 };
 

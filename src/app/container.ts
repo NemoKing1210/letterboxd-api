@@ -50,6 +50,7 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
   const movies = new PrismaMovieRepository(prisma);
   const userMovies = new PrismaUserMovieRepository(prisma);
   const syncHistory = new PrismaSyncHistoryRepository(prisma);
+  const userSyncTtlSeconds = env.USER_SYNC_TTL_SECONDS;
 
   const proxyConfigured = Boolean(env.HTTP_PROXY || env.HTTPS_PROXY);
   if (proxyConfigured) {
@@ -102,24 +103,70 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
       syncService,
       cache,
       env,
+      logger,
+      userSyncTtlSeconds,
     });
 
   const moviesService =
     overrides?.moviesService ??
-    new MoviesService({ users, userMovies, syncService, enrichment });
+    new MoviesService({
+      users,
+      userMovies,
+      syncHistory,
+      syncService,
+      enrichment,
+      logger,
+      userSyncTtlSeconds,
+    });
   const ratingsService =
     overrides?.ratingsService ??
-    new RatingsService({ users, userMovies, syncService, enrichment, cache, env });
+    new RatingsService({
+      users,
+      userMovies,
+      syncHistory,
+      syncService,
+      enrichment,
+      cache,
+      env,
+      logger,
+      userSyncTtlSeconds,
+    });
   const favoritesService =
     overrides?.favoritesService ??
-    new FavoritesService({ users, userMovies, syncService, enrichment, cache, env });
+    new FavoritesService({
+      users,
+      userMovies,
+      syncHistory,
+      syncService,
+      enrichment,
+      cache,
+      env,
+      logger,
+      userSyncTtlSeconds,
+    });
   const statisticsService =
     overrides?.statisticsService ??
-    new StatisticsService({ users, userMovies, syncService, cache, env });
+    new StatisticsService({
+      users,
+      userMovies,
+      syncHistory,
+      syncService,
+      cache,
+      env,
+      logger,
+      userSyncTtlSeconds,
+    });
   const recommendationService =
     overrides?.recommendationService ??
     new RecommendationService(
-      new RuleBasedRecommendationEngine({ users, userMovies, syncService }),
+      new RuleBasedRecommendationEngine({
+        users,
+        userMovies,
+        syncHistory,
+        syncService,
+        logger,
+        userSyncTtlSeconds,
+      }),
     );
 
   return {

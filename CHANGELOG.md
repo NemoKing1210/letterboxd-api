@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-08-09
+
+### Added
+
+- `USER_SYNC_TTL_SECONDS` — auto re-sync on user-scoped GET when the last successful sync is older than the TTL (default 12h; `0` disables stale refresh)
+- In-flight sync deduplication per username so concurrent GETs share one scrape
+
+### Changed
+
+- User-scoped GET endpoints run freshness check before response cache reads
+- Stale auto-sync failures are logged and existing local data is returned
+
 ## [1.4.1] - 2026-08-09
 
 ### Changed

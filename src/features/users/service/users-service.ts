@@ -1,6 +1,11 @@
 import type { CacheProvider } from '../../../infrastructure/cache';
-import type { SyncHistoryRepository, UserRepository, UserMovieRepository } from '../../../infrastructure/database';
+import type {
+  SyncHistoryRepository,
+  UserMovieRepository,
+  UserRepository,
+} from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
+import type { AppLogger } from '../../../infrastructure/logger';
 import { CACHE_KEYS } from '../../../shared/constants';
 import { average, countBy, normalizeUsername, topN } from '../../../shared/utils';
 import type { UserProfile } from '../schemas/user-schemas';
@@ -13,6 +18,8 @@ export type UsersServiceDeps = {
   syncService: UserSyncTrigger;
   cache: CacheProvider;
   env: Env;
+  logger: AppLogger;
+  userSyncTtlSeconds: number;
   autoSyncIfMissing?: boolean;
 };
 
@@ -21,11 +28,11 @@ export class UsersService {
 
   async getProfile(username: string): Promise<UserProfile> {
     const normalized = normalizeUsername(username);
+    const user = await ensureLocalUser(normalized, this.deps);
+
     const cacheKey = CACHE_KEYS.userProfile(normalized);
     const cached = await this.deps.cache.get<UserProfile>(cacheKey);
     if (cached) return cached;
-
-    const user = await ensureLocalUser(normalized, this.deps);
 
     const entries = await this.deps.userMovies.findAllForUser(user.id);
     const ratings = entries.map((e) => e.rating).filter((r): r is number => r !== null);

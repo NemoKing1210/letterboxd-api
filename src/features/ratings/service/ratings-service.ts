@@ -1,6 +1,11 @@
 import type { CacheProvider } from '../../../infrastructure/cache';
-import type { UserMovieRepository, UserRepository } from '../../../infrastructure/database';
+import type {
+  SyncHistoryRepository,
+  UserMovieRepository,
+  UserRepository,
+} from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
+import type { AppLogger } from '../../../infrastructure/logger';
 import { CACHE_KEYS } from '../../../shared/constants';
 import { average, normalizeUsername } from '../../../shared/utils';
 import { toMovieDto } from '../../movies/mappers/to-movie-dto';
@@ -24,10 +29,13 @@ export type RatingsSummary = {
 export type RatingsServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
+  syncHistory: SyncHistoryRepository;
   syncService: UserSyncTrigger;
   enrichment: FilmEnrichmentService;
   cache: CacheProvider;
   env: Env;
+  logger: AppLogger;
+  userSyncTtlSeconds: number;
   autoSyncIfMissing?: boolean;
 };
 
@@ -36,11 +44,11 @@ export class RatingsService {
 
   async getRatings(username: string): Promise<RatingsSummary> {
     const normalized = normalizeUsername(username);
+    const user = await ensureLocalUser(normalized, this.deps);
+
     const cacheKey = CACHE_KEYS.userRatings(normalized);
     const cached = await this.deps.cache.get<RatingsSummary>(cacheKey);
     if (cached) return cached;
-
-    const user = await ensureLocalUser(normalized, this.deps);
 
     const entries = await this.deps.userMovies.findAllForUser(user.id);
     const rated = entries

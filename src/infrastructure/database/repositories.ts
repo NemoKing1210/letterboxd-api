@@ -57,6 +57,7 @@ export interface SyncHistoryRepository {
     data: { status: SyncStatus; finishedAt?: Date; error?: string | null; userId?: string },
   ): Promise<SyncHistory>;
   findLatest(username: string): Promise<SyncHistory | null>;
+  findLatestSuccessful(username: string): Promise<SyncHistory | null>;
 }
 
 export class PrismaUserRepository implements UserRepository {
@@ -269,6 +270,13 @@ export class PrismaSyncHistoryRepository implements SyncHistoryRepository {
     return this.prisma.syncHistory.findFirst({
       where: { username: username.toLowerCase() },
       orderBy: { startedAt: 'desc' },
+    });
+  }
+
+  findLatestSuccessful(username: string): Promise<SyncHistory | null> {
+    return this.prisma.syncHistory.findFirst({
+      where: { username: username.toLowerCase(), status: 'SUCCESS' },
+      orderBy: { finishedAt: 'desc' },
     });
   }
 }

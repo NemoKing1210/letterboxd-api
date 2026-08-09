@@ -103,6 +103,7 @@ bun run dev
 | `LETTERBOXD_ENRICH_CONCURRENCY` | Parallel on-demand film-page enrichments when serving responses (default 8) |
 | `LETTERBOXD_ENRICH_RETRIES` | Retries per film during on-demand enrichment (default 3) |
 | `CACHE_TTL` | In-memory cache TTL (seconds) |
+| `USER_SYNC_TTL_SECONDS` | Re-sync on user GET when last successful sync is older (default 43200 = 12h; `0` = only when user missing) |
 | `RATE_LIMIT_*` | Per-IP rate limiting |
 | `CORS_ORIGIN` | Allowed origins (`*` or CSV) |
 
@@ -118,7 +119,7 @@ bun run dev
 | `GET` | `/api/users/:username/recommendations` | Rule-based recommendations |
 | `POST` | `/api/users/:username/sync` | Force Letterboxd sync |
 
-User-scoped `GET` endpoints auto-sync from Letterboxd when the user is missing locally (first request may be slow). Sync imports the films list (year from titles, no placeholder posters) and diary watched dates. Genres, directors, and real posters are enriched on demand for movies returned by the API (tracked by internal `Movie.enriched`). Movie list `limit` max is 100. Movie responses include a Letterboxd `url`.
+User-scoped `GET` endpoints auto-sync from Letterboxd when the user is missing locally, or when the last successful sync is older than `USER_SYNC_TTL_SECONDS` (default 12h; set `0` to disable stale refresh). First sync / refresh may be slow. Sync imports the films list (year from titles, no placeholder posters) and diary watched dates. Genres, directors, and real posters are enriched on demand for movies returned by the API (tracked by internal `Movie.enriched`). Movie list `limit` max is 100. Movie responses include a Letterboxd `url`.
 
 Example:
 

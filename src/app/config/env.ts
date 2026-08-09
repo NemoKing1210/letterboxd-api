@@ -46,6 +46,8 @@ const envSchema = z
     LETTERBOXD_ENRICH_CONCURRENCY: z.coerce.number().int().positive().default(8),
     LETTERBOXD_ENRICH_RETRIES: z.coerce.number().int().positive().default(3),
     CACHE_TTL: z.coerce.number().int().positive().default(300),
+    /** Max age of a successful user sync before GET endpoints re-sync. 0 disables stale refresh. */
+    USER_SYNC_TTL_SECONDS: z.coerce.number().int().nonnegative().default(43_200),
     PORT: z.coerce.number().int().positive().default(3000),
     NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),

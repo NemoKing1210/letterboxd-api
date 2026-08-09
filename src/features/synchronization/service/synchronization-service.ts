@@ -25,10 +25,25 @@ export type SynchronizationServiceDeps = {
 };
 
 export class SynchronizationService {
+  private readonly inFlight = new Map<string, Promise<SyncResponse>>();
+
   constructor(private readonly deps: SynchronizationServiceDeps) {}
 
   async syncLetterboxdUser(username: string): Promise<SyncResponse> {
     const normalized = normalizeUsername(username);
+    const existing = this.inFlight.get(normalized);
+    if (existing) {
+      return existing;
+    }
+
+    const promise = this.runSync(normalized).finally(() => {
+      this.inFlight.delete(normalized);
+    });
+    this.inFlight.set(normalized, promise);
+    return promise;
+  }
+
+  private async runSync(normalized: string): Promise<SyncResponse> {
     const sync = await this.deps.syncHistory.create({
       username: normalized,
       status: 'RUNNING',
