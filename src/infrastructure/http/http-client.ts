@@ -2,10 +2,30 @@ import { resolveProxyUrl, type ProxyEnvParts } from '../../app/config/proxy-url'
 import { ExternalServiceError } from '../../shared/errors/app-error';
 import { sleep } from '../../shared/utils';
 
+export const DEFAULT_SCRAPER_USER_AGENT =
+  'LetterboxdIntelligenceAPI/1.0 (+https://github.com/letterboxd-intelligence-api; personal use)';
+
+/** Navigation-like headers — Cloudflare often challenges bare scrapes without these. */
+export const DEFAULT_SCRAPER_HEADERS: Record<string, string> = {
+  Accept:
+    'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+  'Accept-Language': 'en-US,en;q=0.9',
+  'Cache-Control': 'no-cache',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Sec-Fetch-User': '?1',
+  'Upgrade-Insecure-Requests': '1',
+};
+
+/** Markers unique to the interstitial challenge page (not present on real Letterboxd HTML). */
+const CLOUDFLARE_CHALLENGE_MARKERS = ['Just a moment', 'cf-browser-verification'] as const;
+
 export type HttpClientOptions = {
   timeoutMs: number;
   maxRetries?: number;
   userAgent?: string;
+  headers?: Record<string, string>;
   proxy?: ProxyEnvParts;
 };
 
@@ -14,15 +34,17 @@ type FetchInitWithProxy = RequestInit & { proxy?: string };
 export class HttpClient {
   private readonly timeoutMs: number;
   private readonly maxRetries: number;
-  private readonly userAgent: string;
+  private readonly headers: Record<string, string>;
   private readonly proxy?: ProxyEnvParts;
 
   constructor(options: HttpClientOptions) {
     this.timeoutMs = options.timeoutMs;
     this.maxRetries = options.maxRetries ?? 3;
-    this.userAgent =
-      options.userAgent ??
-      'LetterboxdIntelligenceAPI/1.0 (+https://github.com/letterboxd-intelligence-api; personal use)';
+    this.headers = {
+      ...DEFAULT_SCRAPER_HEADERS,
+      ...options.headers,
+      'User-Agent': options.userAgent ?? DEFAULT_SCRAPER_USER_AGENT,
+    };
     this.proxy = options.proxy;
   }
 
@@ -37,10 +59,7 @@ export class HttpClient {
         const proxyUrl = this.proxy ? resolveProxyUrl(url, this.proxy) : undefined;
         const init: FetchInitWithProxy = {
           signal: controller.signal,
-          headers: {
-            'User-Agent': this.userAgent,
-            Accept: 'text/html,application/xhtml+xml',
-          },
+          headers: this.headers,
           ...(proxyUrl ? { proxy: proxyUrl } : {}),
         };
 
@@ -48,6 +67,16 @@ export class HttpClient {
 
         if (response.status === 404) {
           throw new ExternalServiceError(`Resource not found: ${url}`, { status: 404 });
+        }
+
+        const body = await response.text();
+
+        if (isCloudflareChallenge(response.status, body)) {
+          lastError = new ExternalServiceError(`Cloudflare challenge for ${url}`, {
+            status: response.status,
+          });
+          await sleep(250 * 2 ** attempt);
+          continue;
         }
 
         if (response.status === 429 || response.status >= 500) {
@@ -64,9 +93,13 @@ export class HttpClient {
           });
         }
 
-        return await response.text();
+        return body;
       } catch (error) {
-        if (error instanceof ExternalServiceError && error.details && (error.details as { status?: number }).status === 404) {
+        if (
+          error instanceof ExternalServiceError &&
+          error.details &&
+          (error.details as { status?: number }).status === 404
+        ) {
           throw error;
         }
         lastError = error;
@@ -80,4 +113,14 @@ export class HttpClient {
 
     throw new ExternalServiceError(`Failed to fetch ${url}`, undefined, lastError);
   }
+}
+
+export function isCloudflareChallenge(status: number, body: string): boolean {
+  if (status === 403) {
+    return CLOUDFLARE_CHALLENGE_MARKERS.some((marker) => body.includes(marker));
+  }
+  if (status === 200 || status === 503) {
+    return CLOUDFLARE_CHALLENGE_MARKERS.some((marker) => body.includes(marker));
+  }
+  return false;
 }

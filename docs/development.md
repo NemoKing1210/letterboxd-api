@@ -52,4 +52,5 @@ Husky runs lint-staged on pre-commit.
 - Prefer `POST /sync` intentionally; avoid hammering Letterboxd
 - Use fixtures under `tests/fixtures/letterboxd` for parser changes
 - Keep `LETTERBOXD_PAGE_DELAY_MS` ≥ 500 for real scrapes
+- Scraper `HttpClient` sends navigation-like headers so Cloudflare is less likely to challenge requests; challenges are retried with backoff
 - Optional outbound proxy: set `HTTPS_PROXY` / `HTTP_PROXY` (and `NO_PROXY` if needed). Applies only to external HTTP (Letterboxd scrape, future APIs) — not to PostgreSQL/Prisma.
