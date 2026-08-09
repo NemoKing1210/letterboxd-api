@@ -8,6 +8,12 @@ import { MemoryCache } from '../../src/infrastructure/cache';
 function createTestContainer(overrides: Partial<AppContainer> = {}): AppContainer {
   const env: Env = {
     DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/letterboxd?schema=public',
+    DB_HOST: 'localhost',
+    DB_PORT: 5432,
+    DB_USER: 'postgres',
+    DB_PASSWORD: 'postgres',
+    DB_NAME: 'letterboxd',
+    DB_SCHEMA: 'public',
     SUPABASE_URL: '',
     SUPABASE_KEY: '',
     LETTERBOXD_TIMEOUT: 1000,

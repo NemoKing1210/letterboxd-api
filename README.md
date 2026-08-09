@@ -65,7 +65,18 @@ bun run db:generate
 bun run db:migrate
 ```
 
-Or point `DATABASE_URL` at your Supabase connection string.
+Or configure discrete DB vars in `.env` for OpenServer:
+
+```env
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_USER=postgres
+DB_PASSWORD=your_password
+DB_NAME=letterboxd
+DB_SCHEMA=public
+```
+
+Alternatively set a full `DATABASE_URL` (Supabase / managed Postgres) — it overrides `DB_*`.
 
 ### 3. Run API
 
@@ -81,7 +92,8 @@ bun run dev
 
 | Variable | Description |
 | --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string |
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `DB_SCHEMA` | Discrete PostgreSQL settings (OpenServer-friendly) |
+| `DATABASE_URL` | Optional full URL; if set, overrides `DB_*` |
 | `SUPABASE_URL` / `SUPABASE_KEY` | Optional Supabase credentials |
 | `LETTERBOXD_TIMEOUT` | Scraper HTTP timeout (ms) |
 | `LETTERBOXD_PAGE_DELAY_MS` | Delay between scrape pages |
@@ -123,7 +135,7 @@ bun run db:studio     # prisma studio
 ## Deployment (Vercel)
 
 1. Create a Vercel project linked to this repo
-2. Set `DATABASE_URL` (and other env vars) in Vercel
+2. Set DB env vars (`DB_*` or `DATABASE_URL`) and other secrets in Vercel
 3. Deploy — entrypoint is [`api/index.ts`](api/index.ts)
 
 ## Documentation

@@ -17,10 +17,10 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:migrate:deploy": "prisma migrate deploy",
-    "db:studio": "prisma studio",
-    "db:push": "prisma db push",
+    "db:migrate": "bun run scripts/run-prisma.ts migrate dev",
+    "db:migrate:deploy": "bun run scripts/run-prisma.ts migrate deploy",
+    "db:studio": "bun run scripts/run-prisma.ts studio",
+    "db:push": "bun run scripts/run-prisma.ts db push",
     "prepare": "husky"
   },
   "keywords": [

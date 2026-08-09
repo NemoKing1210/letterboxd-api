@@ -1,6 +1,6 @@
 # Database
 
-PostgreSQL via Prisma. Compatible with Supabase (`DATABASE_URL`).
+PostgreSQL via Prisma. Configure either discrete `DB_*` variables or a full `DATABASE_URL` (Supabase / managed). If both are set, `DATABASE_URL` wins.
 
 ## ER diagram
 
