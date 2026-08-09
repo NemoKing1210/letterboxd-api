@@ -6,18 +6,17 @@ import type {
 import type { AppLogger } from '../../../infrastructure/logger';
 import { createPaginatedResult, type PaginatedResult } from '../../../shared/types';
 import { normalizeUsername } from '../../../shared/utils';
+import { toMovieDto } from '../../movies/mappers/to-movie-dto';
+import type { MovieDto } from '../../movies/schemas/movie-schemas';
+import type { FilmEnrichmentService } from '../../movies/service/film-enrichment-service';
 import {
   ensureLocalUser,
   type UserSyncTrigger,
 } from '../../users/service/ensure-local-user';
-import { toMovieDto } from '../mappers/to-movie-dto';
-import { resolveMovieListSearch } from '../../users/schemas/user-schemas';
-import type { MovieDto, MovieQuery } from '../schemas/movie-schemas';
-import type { FilmEnrichmentService } from './film-enrichment-service';
+import type { SearchBody } from '../schemas/search-schemas';
+import { buildSearchWhere } from './build-search-where';
 
-export type { MovieDto };
-
-export type MoviesServiceDeps = {
+export type SearchServiceDeps = {
   users: UserRepository;
   userMovies: UserMovieRepository;
   syncHistory: SyncHistoryRepository;
@@ -28,24 +27,27 @@ export type MoviesServiceDeps = {
   autoSyncIfMissing?: boolean;
 };
 
-export class MoviesService {
-  constructor(private readonly deps: MoviesServiceDeps) {}
+export class SearchService {
+  constructor(private readonly deps: SearchServiceDeps) {}
 
-  async listMovies(username: string, query: MovieQuery): Promise<PaginatedResult<MovieDto>> {
+  async search(username: string, body: SearchBody): Promise<PaginatedResult<MovieDto>> {
     const normalized = normalizeUsername(username);
     const user = await ensureLocalUser(normalized, this.deps);
 
-    const { items, total } = await this.deps.userMovies.findFiltered(user.id, {
-      ...query,
-      q: resolveMovieListSearch(query),
+    const filterWhere = buildSearchWhere(body.filter);
+    const { items, total } = await this.deps.userMovies.findBySearch(user.id, {
+      filterWhere,
+      sort: body.sort,
+      page: body.page,
+      limit: body.limit,
     });
     const enriched = await this.deps.enrichment.enrichEntries(items);
 
     return createPaginatedResult(
       enriched.map(toMovieDto),
       total,
-      query.page,
-      query.limit,
+      body.page,
+      body.limit,
     );
   }
 }

@@ -13,9 +13,10 @@ import {
   namedCountSchema,
 } from '../features/favorites/schemas/favorites-schemas';
 import { movieDtoSchema } from '../features/movies/schemas/movie-schemas';
+import { searchBodyOpenApiSchema, searchBodySchema } from '../features/search/schemas/search-schemas';
 import { movieQuerySchema, usernameParamSchema, userProfileSchema } from '../features/users/schemas/user-schemas';
 import { syncResponseSchema } from '../features/synchronization/schemas/sync-schemas';
-import { AppError } from '../shared/errors/app-error';
+import { AppError, ValidationError } from '../shared/errors/app-error';
 
 type AppVariables = {
   requestId: string;
@@ -241,6 +242,40 @@ export function createApp(container: AppContainer) {
     return c.json(result, 200);
   });
 
+  const searchMoviesRoute = createRoute({
+    method: 'post',
+    path: '/api/users/{username}/search',
+    tags: ['Search'],
+    summary: 'Advanced movie search with nested filter DSL',
+    request: {
+      params: usernameParamSchema,
+      body: {
+        content: {
+          'application/json': {
+            schema: searchBodyOpenApiSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Paginated search results',
+        content: { 'application/json': { schema: PaginatedMoviesSchema } },
+      },
+    },
+  });
+
+  app.openapi(searchMoviesRoute, async (c) => {
+    const { username } = c.req.valid('param');
+    const raw = c.req.valid('json');
+    const parsed = searchBodySchema.safeParse(raw);
+    if (!parsed.success) {
+      throw new ValidationError('Invalid search body', parsed.error.flatten());
+    }
+    const result = await container.searchService.search(username, parsed.data);
+    return c.json(result, 200);
+  });
+
   const getFavoriteDirectorsRoute = createRoute({
     method: 'get',
     path: '/api/users/{username}/favorites/directors',
@@ -384,9 +419,9 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '2.1.0',
+      version: '2.2.0',
       description:
-        'Analyze Letterboxd film taste: sync, filter, statistics, and AI-ready recommendations.',
+        'Analyze Letterboxd film taste: sync, filter, search, statistics, and AI-ready recommendations.',
     },
     servers: [{ url: '/' }],
   });

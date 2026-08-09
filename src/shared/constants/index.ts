@@ -9,6 +9,12 @@ export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 20;
 /** Hard cap for any paginated / list movie payload in the API. */
 export const MAX_LIMIT = 100;
+/** Max length for simple `q` / `search` and advanced string values. */
+export const SEARCH_QUERY_MAX_LENGTH = 128;
+/** Max nesting depth for advanced search filter groups. */
+export const SEARCH_MAX_DEPTH = 5;
+/** Max conditions in a single advanced search filter group. */
+export const SEARCH_MAX_CONDITIONS = 32;
 /** Rating at or above this counts as a favorite when `favorite` flag is false. */
 export const FAVORITE_RATING_THRESHOLD = 4.5;
 export const DEFAULT_ENRICH_CONCURRENCY = 8;

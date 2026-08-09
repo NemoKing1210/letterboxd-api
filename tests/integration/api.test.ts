@@ -108,6 +108,15 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
         totalPages: 1,
       })),
     } as unknown as AppContainer['favoritesService'],
+    searchService: {
+      search: vi.fn(async () => ({
+        items: [],
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 1,
+      })),
+    } as unknown as AppContainer['searchService'],
     statisticsService: {
       getStatistics: vi.fn(async () => ({
         moviesWatched: 3,
@@ -171,6 +180,30 @@ describe('API integration', () => {
       'demo',
       'directors',
       expect.objectContaining({ page: 1, limit: 20 }),
+    );
+  });
+
+  it('runs advanced search', async () => {
+    const container = createTestContainer();
+    const app = createApp(container);
+
+    const res = await app.request('/api/users/demo/search', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        filter: { field: 'title', op: 'contains', value: 'matrix' },
+        page: 1,
+        limit: 10,
+      }),
+    });
+    expect(res.status).toBe(200);
+    expect(container.searchService.search).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining({
+        filter: { field: 'title', op: 'contains', value: 'matrix' },
+        page: 1,
+        limit: 10,
+      }),
     );
   });
 });

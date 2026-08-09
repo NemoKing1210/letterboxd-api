@@ -14,4 +14,6 @@ export type {
   SyncHistoryRepository,
   UserWithMovies,
   MovieListFilters,
+  MovieListSort,
+  MovieSearchQuery,
 } from './repositories';

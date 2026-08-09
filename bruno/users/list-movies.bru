@@ -16,6 +16,8 @@ params:query {
   ~yearTo: 2024
   ~genre: sci-fi
   ~director: Nolan
+  ~q: matrix
+  ~search: matrix
   sort: rating_desc
   page: 1
   limit: 20
@@ -31,6 +33,7 @@ docs {
   | `yearFrom` / `yearTo` | Range |
   | `genre` | Exact genre token |
   | `director` | Case-insensitive contains |
+  | `q` / `search` | Case-insensitive title/slug contains (aliases; must match if both set) |
   | `sort` | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
   | `page` / `limit` | Pagination (`limit` default 20, max 100) |
 

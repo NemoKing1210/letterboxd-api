@@ -73,6 +73,7 @@ function createService(entries: Array<UserMovie & { movie: Movie }>) {
       const start = (filters.page - 1) * filters.limit;
       return { items: items.slice(start, start + filters.limit), total };
     }),
+    findBySearch: vi.fn(),
     findAllForUser: vi.fn(async () => entries),
   };
   const latestSuccess: SyncHistory = {

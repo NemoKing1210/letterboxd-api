@@ -1,0 +1,48 @@
+meta {
+  name: Advanced Search
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/api/users/{{username}}/search
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filter": {
+      "op": "and",
+      "conditions": [
+        { "field": "title", "op": "contains", "value": "matrix" },
+        { "field": "year", "op": "gte", "value": 1990 },
+        {
+          "op": "or",
+          "conditions": [
+            { "field": "genre", "op": "eq", "value": "sci-fi" },
+            { "field": "director", "op": "contains", "value": "Wachowski" }
+          ]
+        }
+      ]
+    },
+    "sort": "rating_desc",
+    "page": 1,
+    "limit": 20
+  }
+}
+
+docs {
+  Advanced nested filter search over the user's library.
+
+  Atom: `{ field, op, value, valueTo? }`
+  Group: `{ op: "and"|"or", conditions: [...] }`
+
+  Fields: `title`, `slug`, `director`, `genre`, `year`, `rating`, `favorite`, `watchedDate`
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

@@ -82,10 +82,47 @@ Query params:
 | `yearFrom` / `yearTo` | Range |
 | `genre` | Exact genre token (lowercase; filled by Letterboxd film-page enrichment) |
 | `director` | Case-insensitive contains |
+| `q` / `search` | Case-insensitive title or slug contains (aliases; must be identical if both are set) |
 | `sort` | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
 | `page` / `limit` | Pagination (`limit` default **20**, max **100**) |
 
 Paginated response: `{ items: Movie[], page, limit, total, totalPages }`. Omitting `limit` still applies the default of 20 — unbounded lists are not supported.
+
+### Advanced search
+
+`POST /api/users/:username/search`
+
+JSON body with optional nested `filter`, plus `sort` / `page` / `limit` (same defaults as `/movies`).
+
+```json
+{
+  "filter": {
+    "op": "and",
+    "conditions": [
+      { "field": "title", "op": "contains", "value": "matrix" },
+      { "field": "year", "op": "gte", "value": 1990 },
+      {
+        "op": "or",
+        "conditions": [
+          { "field": "genre", "op": "eq", "value": "sci-fi" },
+          { "field": "director", "op": "contains", "value": "Wachowski" }
+        ]
+      }
+    ]
+  },
+  "sort": "rating_desc",
+  "page": 1,
+  "limit": 20
+}
+```
+
+- **Groups:** `{ "op": "and"|"or", "conditions": [...] }` (max depth 5, max 32 conditions per group)
+- **Atoms:** `{ "field", "op", "value", "valueTo"? }` (`valueTo` for `between`; array `value` for `in`)
+- **Fields:** `title`, `slug`, `director`, `genre`, `year`, `rating`, `favorite`, `watchedDate`
+- **Operators:** strings — `eq`, `neq`, `contains`, `startsWith`, `endsWith`, `in`; genre — `eq`, `in`; numbers — `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between`, `in`; `favorite` — `eq`; `watchedDate` — `eq`, `gte`, `lte`, `between` (ISO datetimes)
+- Omit `filter` to return the full library (paginated)
+
+Response: same paginated `Movie[]` shape as `/movies`.
 
 ### Ratings
 

@@ -153,6 +153,7 @@ describe('SynchronizationService', () => {
       userMovies: {
         upsert: upsertUserMovie,
         findFiltered: vi.fn(),
+        findBySearch: vi.fn(),
         findAllForUser: vi.fn(),
       },
       syncHistory: {
@@ -249,6 +250,7 @@ describe('SynchronizationService', () => {
       userMovies: {
         upsert: vi.fn(),
         findFiltered: vi.fn(),
+        findBySearch: vi.fn(),
         findAllForUser: vi.fn(),
       },
       syncHistory: {

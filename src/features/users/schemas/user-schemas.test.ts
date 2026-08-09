@@ -29,6 +29,19 @@ describe('user schemas', () => {
     expect(query.genre).toBe('sci-fi');
   });
 
+  it('accepts q and search aliases when identical', () => {
+    const withQ = movieQuerySchema.parse({ q: 'matrix' });
+    expect(withQ.q).toBe('matrix');
+    const withSearch = movieQuerySchema.parse({ search: 'matrix' });
+    expect(withSearch.search).toBe('matrix');
+    const both = movieQuerySchema.parse({ q: 'matrix', search: 'matrix' });
+    expect(both.q).toBe('matrix');
+  });
+
+  it('rejects conflicting q and search', () => {
+    expect(() => movieQuerySchema.parse({ q: 'a', search: 'b' })).toThrow();
+  });
+
   it('rejects movie list limits above 100', () => {
     expect(() => movieQuerySchema.parse({ limit: '101' })).toThrow();
   });

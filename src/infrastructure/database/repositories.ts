@@ -6,6 +6,15 @@ export type UserWithMovies = User & {
   movies: Array<UserMovie & { movie: Movie }>;
 };
 
+export type MovieListSort =
+  | 'rating_desc'
+  | 'rating_asc'
+  | 'date_desc'
+  | 'date_asc'
+  | 'year_desc'
+  | 'year_asc'
+  | 'title_asc';
+
 export type MovieListFilters = {
   ratingMin?: number;
   ratingMax?: number;
@@ -14,9 +23,19 @@ export type MovieListFilters = {
   yearTo?: number;
   genre?: string;
   director?: string;
-  sort?: 'rating_desc' | 'rating_asc' | 'date_desc' | 'date_asc' | 'year_desc' | 'year_asc' | 'title_asc';
+  /** Case-insensitive contains on movie title or slug. */
+  q?: string;
+  sort?: MovieListSort;
   /** When true, only liked films: favorite flag or rating >= FAVORITE_RATING_THRESHOLD. */
   likedOnly?: boolean;
+  page: number;
+  limit: number;
+};
+
+export type MovieSearchQuery = {
+  /** Extra Prisma where clause (excluding userId; merged with AND). */
+  filterWhere?: Prisma.UserMovieWhereInput;
+  sort?: MovieListSort;
   page: number;
   limit: number;
 };
@@ -57,6 +76,10 @@ export interface UserMovieRepository {
     watchedDate: Date | null;
   }): Promise<UserMovie>;
   findFiltered(userId: string, filters: MovieListFilters): Promise<{ items: Array<UserMovie & { movie: Movie }>; total: number }>;
+  findBySearch(
+    userId: string,
+    query: MovieSearchQuery,
+  ): Promise<{ items: Array<UserMovie & { movie: Movie }>; total: number }>;
   findAllForUser(userId: string): Promise<Array<UserMovie & { movie: Movie }>>;
 }
 
@@ -223,12 +246,47 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
         ...(filters.director
           ? { director: { contains: filters.director, mode: 'insensitive' } }
           : {}),
+        ...(filters.q
+          ? {
+              OR: [
+                { title: { contains: filters.q, mode: 'insensitive' } },
+                { slug: { contains: filters.q, mode: 'insensitive' } },
+              ],
+            }
+          : {}),
       },
     };
 
-    const orderBy = this.buildOrderBy(filters.sort);
-    const limit = clamp(filters.limit, 1, MAX_LIMIT);
-    const page = Math.max(1, filters.page);
+    return this.paginate(where, filters.sort, filters.page, filters.limit);
+  }
+
+  async findBySearch(
+    userId: string,
+    query: MovieSearchQuery,
+  ): Promise<{ items: Array<UserMovie & { movie: Movie }>; total: number }> {
+    const where: Prisma.UserMovieWhereInput = {
+      userId,
+      ...(query.filterWhere ? { AND: [query.filterWhere] } : {}),
+    };
+    return this.paginate(where, query.sort, query.page, query.limit);
+  }
+
+  findAllForUser(userId: string): Promise<Array<UserMovie & { movie: Movie }>> {
+    return this.prisma.userMovie.findMany({
+      where: { userId },
+      include: { movie: true },
+    });
+  }
+
+  private async paginate(
+    where: Prisma.UserMovieWhereInput,
+    sort: MovieListSort | undefined,
+    pageInput: number,
+    limitInput: number,
+  ): Promise<{ items: Array<UserMovie & { movie: Movie }>; total: number }> {
+    const orderBy = this.buildOrderBy(sort);
+    const limit = clamp(limitInput, 1, MAX_LIMIT);
+    const page = Math.max(1, pageInput);
     const [total, items] = await Promise.all([
       this.prisma.userMovie.count({ where }),
       this.prisma.userMovie.findMany({
@@ -239,18 +297,10 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
         take: limit,
       }),
     ]);
-
     return { items, total };
   }
 
-  findAllForUser(userId: string): Promise<Array<UserMovie & { movie: Movie }>> {
-    return this.prisma.userMovie.findMany({
-      where: { userId },
-      include: { movie: true },
-    });
-  }
-
-  private buildOrderBy(sort?: MovieListFilters['sort']): Prisma.UserMovieOrderByWithRelationInput[] {
+  private buildOrderBy(sort?: MovieListSort): Prisma.UserMovieOrderByWithRelationInput[] {
     switch (sort) {
       case 'rating_asc':
         return [{ rating: 'asc' }, { movie: { title: 'asc' } }];

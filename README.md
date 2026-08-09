@@ -8,7 +8,8 @@ Production-ready API for analyzing Letterboxd film taste: sync user data, filter
 
 - Sync Letterboxd profiles into PostgreSQL
 - User profile aggregates
-- Movies API with rating / year / genre / director filters, sorting, pagination
+- Movies API with rating / year / genre / director filters, title search (`q`/`search`), sorting, pagination
+- Advanced `POST /search` filter DSL for nested queries
 - Ratings, favorites, and statistics endpoints
 - Rule-based recommendation stub (AI-ready interface)
 - OpenAPI + Swagger UI at `/docs`
@@ -118,6 +119,7 @@ bun run dev
 | `GET` | `/api/users/:username/favorites/directors` | Favorite directors |
 | `GET` | `/api/users/:username/favorites/genres` | Favorite genres |
 | `GET` | `/api/users/:username/favorites/years` | Favorite years |
+| `POST` | `/api/users/:username/search` | Advanced nested filter search |
 | `GET` | `/api/users/:username/statistics` | Statistics |
 | `GET` | `/api/users/:username/recommendations` | Rule-based recommendations |
 | `POST` | `/api/users/:username/sync` | Force Letterboxd sync |

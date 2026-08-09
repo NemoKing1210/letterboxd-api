@@ -16,6 +16,7 @@ import {
   ensureLocalUser,
   type UserSyncTrigger,
 } from '../../users/service/ensure-local-user';
+import { resolveMovieListSearch } from '../../users/schemas/user-schemas';
 import type {
   FavoritesFacetKind,
   FavoritesFacetQuery,
@@ -54,6 +55,7 @@ export class FavoritesService {
 
     const { items, total } = await this.deps.userMovies.findFiltered(user.id, {
       ...query,
+      q: resolveMovieListSearch(query),
       likedOnly: true,
     });
     const enriched = await this.deps.enrichment.enrichEntries(items);
