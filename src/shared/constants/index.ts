@@ -44,6 +44,10 @@ export const DEFAULT_ENRICH_CONCURRENCY = 8;
 export const DEFAULT_ENRICH_RETRIES = 3;
 export const DEFAULT_RETRY_BASE_MS = 250;
 export const DEFAULT_RETRY_MAX_MS = 8_000;
+/** Keep in sync with `vercel.json` `functions.api/index.ts.maxDuration`. */
+export const VERCEL_FUNCTION_MAX_DURATION_SECONDS = 300;
+/** MovieDto keys that require on-demand Letterboxd film-page enrichment. */
+export const MOVIE_ENRICHMENT_FIELDS = ['genres', 'director', 'poster'] as const;
 
 export const LETTERBOXD_BASE_URL = 'https://letterboxd.com';
 

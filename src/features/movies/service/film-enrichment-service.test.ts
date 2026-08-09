@@ -205,4 +205,34 @@ describe('FilmEnrichmentService', () => {
     expect(getFilmDetails).toHaveBeenCalledTimes(2);
     expect(result[0]?.movie.enriched).toBe(true);
   });
+
+  it('skips enrichment work when the request deadline has expired', async () => {
+    const pending = movie({ id: 'm1', title: 'Arrival', slug: 'arrival', enriched: false });
+    const getFilmDetails = vi.fn();
+    const service = new FilmEnrichmentService({
+      movieProvider: { getFilmDetails } as never,
+      movies: { upsertBySlug: vi.fn() } as never,
+      logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() } as never,
+      concurrency: 2,
+      maxAttempts: 1,
+    });
+
+    const { createDeadline, runWithDeadline } = await import('../../../shared/utils');
+    const result = await runWithDeadline(createDeadline(0), () =>
+      service.enrichEntries([
+        {
+          id: 'um1',
+          userId: 'u1',
+          movieId: pending.id,
+          rating: 5,
+          favorite: false,
+          watchedDate: null,
+          movie: pending,
+        },
+      ]),
+    );
+
+    expect(getFilmDetails).not.toHaveBeenCalled();
+    expect(result[0]?.movie.enriched).toBe(false);
+  });
 });

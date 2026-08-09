@@ -186,15 +186,18 @@ Expected: health returns OK JSON; `/docs` loads; user routes work after DB + syn
 
 ### First sync warning
 
-`POST /api/users/:username/sync` (and first `GET` that triggers sync) scrapes Letterboxd and can take a long time. `vercel.json` sets `maxDuration` to **60s** (requires [Pro](https://vercel.com/docs/functions/configuring-functions/duration) or higher). On Hobby the platform caps lower — large profiles may still time out.
+`POST /api/users/:username/sync` (and first `GET` that triggers sync) scrapes Letterboxd and can take a long time. `vercel.json` sets `maxDuration` to **300s** (requires [Pro](https://vercel.com/docs/functions/configuring-functions/duration) or higher). On Hobby the platform caps lower — set `maxDuration` / `REQUEST_BUDGET_MS` to your plan limit.
+
+The app also applies a soft request budget (`REQUEST_BUDGET_MS`, default ~270s on Vercel) so scrape pagination and on-demand enrichment **stop early** and return instead of hitting `Task timed out after N seconds`.
 
 Practical tips:
 
 - Start with a smaller account to confirm the pipeline.
 - Prefer Pro / higher function limits if you sync large libraries in one request.
 - Rely on `USER_SYNC_TTL_SECONDS` so day-to-day reads are fast after the first successful sync.
+- Use `fields=title,year,rating` (etc.) to skip film-page enrichment when you do not need `genres` / `director` / `poster`.
 - Watch **Vercel → Deployments → Functions / Logs** for timeouts and Prisma errors.
-- For Hobby, lower `functions.api/index.ts.maxDuration` in `vercel.json` to your plan limit (e.g. `10`) so deploys do not fail validation.
+- For Hobby, lower `functions.api/index.ts.maxDuration` in `vercel.json` (and optionally set `REQUEST_BUDGET_MS`) to your plan limit (e.g. `10`) so deploys do not fail validation.
 
 ## 5. Production checklist
 
@@ -233,8 +236,8 @@ Use:
 | `500` / Prisma “Can’t reach database”  | `DATABASE_URL` must be transaction pooler for Vercel; password URL-encoding; IPv4 vs IPv6 (see [supabase.md](supabase.md)); project paused / network restrictions |
 | Deploy OK but empty schema errors      | Run `bun run db:migrate:deploy` against that DB (direct URL)                                                                                                      |
 | `401 UNAUTHORIZED`                     | `AUTH_ENABLED`, `AUTH_TOKENS`, request header `X-API-Key`                                                                                                         |
-| Sync / enrichment timeout              | Function `maxDuration` / plan limits; reduce enrichment concurrency; sync a smaller user first                                                                    |
-| Deploy fails on `maxDuration`          | Hobby plan — set `maxDuration` to `10` in `vercel.json`                                                                                                           |
+| Sync / enrichment timeout              | Function `maxDuration` / `REQUEST_BUDGET_MS`; reduce enrichment concurrency; sync a smaller user first; use sparse `fields` without genres/director/poster |
+| Deploy fails on `maxDuration`          | Hobby plan — set `maxDuration` to `10` in `vercel.json` (and lower `REQUEST_BUDGET_MS`)                                                                      |
 | `/docs` or GPT schema 404              | Confirm `vercel.json` rewrites and that `docs/chatgpt-actions.yaml` is included (`includeFiles`)                                                                  |
 | Cold starts feel slow                  | Normal for serverless + Prisma; pin `regions`; warm with `/health` after deploy                                                                                   |
 | `vercel build` / Prisma client missing | `buildCommand` runs `bunx prisma generate`; `postinstall` also generates the client                                                                               |

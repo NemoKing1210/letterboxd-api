@@ -11,6 +11,7 @@ import {
   isPlaceholderPoster,
   isRetryableExternalError,
   mapWithConcurrency,
+  getRequestDeadline,
   withRetry,
 } from '../../../shared/utils';
 import { realPoster } from '../../synchronization/service/merge-film-metadata';
@@ -55,7 +56,22 @@ export class FilmEnrichmentService {
     const enrichedMovies = await mapWithConcurrency(
       [...uniqueBySlug.values()],
       this.concurrency,
-      (movie) => this.enrichOne(movie),
+      async (movie) => {
+        const deadline = getRequestDeadline();
+        if (deadline?.isExpired()) {
+          this.deps.logger.warn(
+            {
+              slug: movie.slug,
+              movieId: movie.id,
+              remainingMs: deadline.remainingMs(),
+              budgetMs: deadline.budgetMs,
+            },
+            'Skipping on-demand film enrichment to respect request budget',
+          );
+          return movie;
+        }
+        return this.enrichOne(movie);
+      },
     );
 
     const byId = new Map(enrichedMovies.map((movie) => [movie.id, movie]));

@@ -1,6 +1,6 @@
 import { LETTERBOXD_BASE_URL } from '../../shared/constants';
 import { ExternalServiceError, NotFoundError } from '../../shared/errors/app-error';
-import { normalizeUsername, sleep } from '../../shared/utils';
+import { getRequestDeadline, normalizeUsername, sleep } from '../../shared/utils';
 import type { AppLogger } from '../logger';
 import { HttpClient } from '../http';
 import type {
@@ -90,6 +90,10 @@ export class LetterboxdScraperProvider implements MovieProvider {
         const hasNext = parseHasNextPage(html);
         if (!hasNext || entries.length === 0) break;
 
+        if (this.shouldStopPagination(normalized, 'diary', page)) {
+          break;
+        }
+
         await this.delayBetweenPages();
       } catch (error) {
         if (page === 1) {
@@ -172,6 +176,10 @@ export class LetterboxdScraperProvider implements MovieProvider {
         const hasNext = parseHasNextPage(html);
         if (!hasNext || films.length === 0) break;
 
+        if (this.shouldStopPagination(normalized, path, page)) {
+          break;
+        }
+
         await this.delayBetweenPages();
       } catch (error) {
         if (page === 1) {
@@ -187,6 +195,24 @@ export class LetterboxdScraperProvider implements MovieProvider {
     }
 
     return all;
+  }
+
+  private shouldStopPagination(username: string, path: string, page: number): boolean {
+    const deadline = getRequestDeadline();
+    if (!deadline?.isExpired()) {
+      return false;
+    }
+    this.logger.warn(
+      {
+        username,
+        path,
+        page,
+        remainingMs: deadline.remainingMs(),
+        budgetMs: deadline.budgetMs,
+      },
+      'Stopping Letterboxd pagination early to respect request budget',
+    );
+    return true;
   }
 
   private async delayBetweenPages(): Promise<void> {

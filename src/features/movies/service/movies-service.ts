@@ -5,7 +5,7 @@ import type {
 } from '../../../infrastructure/database';
 import type { AppLogger } from '../../../infrastructure/logger';
 import { createPaginatedResult, type PaginatedResult } from '../../../shared/types';
-import { normalizeUsername } from '../../../shared/utils';
+import { movieFieldsNeedEnrichment, normalizeUsername } from '../../../shared/utils';
 import {
   ensureLocalUser,
   type UserSyncTrigger,
@@ -39,7 +39,9 @@ export class MoviesService {
       ...query,
       q: resolveMovieListSearch(query),
     });
-    const enriched = await this.deps.enrichment.enrichEntries(items);
+    const enriched = movieFieldsNeedEnrichment(query.fields)
+      ? await this.deps.enrichment.enrichEntries(items)
+      : items;
 
     return createPaginatedResult(
       enriched.map(toMovieDto),

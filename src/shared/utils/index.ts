@@ -2,6 +2,7 @@ import { AppError, ExternalServiceError, NotFoundError } from '../errors/app-err
 import {
   DEFAULT_RETRY_BASE_MS,
   DEFAULT_RETRY_MAX_MS,
+  MOVIE_ENRICHMENT_FIELDS,
 } from '../constants';
 
 export {
@@ -22,6 +23,18 @@ export {
   fieldsOnlyQuerySchema,
 } from './fields';
 export type { MovieDtoField } from './fields';
+export { createDeadline, resolveRequestBudgetMs } from './deadline';
+export type { Deadline } from './deadline';
+export { runWithDeadline, getRequestDeadline } from './request-deadline';
+
+/** True when response fields need film-page enrichment (or fields omitted → full DTO). */
+export function movieFieldsNeedEnrichment(fields: readonly string[] | undefined): boolean {
+  if (!fields || fields.length === 0) {
+    return true;
+  }
+  const needed = MOVIE_ENRICHMENT_FIELDS as readonly string[];
+  return fields.some((field) => needed.includes(field));
+}
 
 const TITLE_YEAR_RE = /\s*\((\d{4})\)\s*$/;
 const PLACEHOLDER_POSTER_RE = /empty-poster|static\/img\/empty/i;

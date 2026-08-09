@@ -11,6 +11,7 @@ import {
 import {
   authMiddleware,
   rateLimitMiddleware,
+  requestDeadlineMiddleware,
   requestIdMiddleware,
   requestLoggingMiddleware,
   securityHeadersMiddleware,
@@ -180,6 +181,7 @@ export function createApp(container: AppContainer) {
   });
 
   app.use('*', requestIdMiddleware());
+  app.use('*', requestDeadlineMiddleware(container));
   app.use('*', securityHeadersMiddleware());
   app.use('*', requestLoggingMiddleware(container));
   app.use('*', rateLimitMiddleware(container));
@@ -610,7 +612,7 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '3.6.4',
+      version: '3.6.6',
       description:
         'Analyze Letterboxd film taste: sync, filter, search, statistics, AI recommendations, and movie/favorites export (JSON/CSV).',
     },

@@ -114,6 +114,14 @@ const envSchema = z
     AI_EMBED_BUDGET: z.coerce.number().int().positive().default(48),
     AI_EMBED_BATCH_SIZE: z.coerce.number().int().positive().default(16),
     AI_RECOMMEND_USE_LLM: booleanishDefaultTrue,
+    /**
+     * Soft request budget (ms) for scrape/enrichment before yielding.
+     * Unset: on Vercel defaults under function maxDuration; locally unlimited.
+     */
+    REQUEST_BUDGET_MS: z.preprocess(
+      (value) => (value === '' || value === undefined || value === null ? undefined : value),
+      z.coerce.number().int().positive().optional(),
+    ),
   })
   .superRefine((data, ctx) => {
     const hasUrl = Boolean(data.DATABASE_URL?.trim());

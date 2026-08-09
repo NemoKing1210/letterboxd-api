@@ -1,5 +1,11 @@
 import type { Context, Next } from 'hono';
 import { RateLimitError } from '../../shared/errors/app-error';
+import { VERCEL_FUNCTION_MAX_DURATION_SECONDS } from '../../shared/constants';
+import {
+  createDeadline,
+  resolveRequestBudgetMs,
+  runWithDeadline,
+} from '../../shared/utils';
 import type { AppContainer } from '../container';
 
 export { authMiddleware } from '../auth/auth-middleware';
@@ -79,5 +85,23 @@ export function rateLimitMiddleware(container: AppContainer) {
     }
 
     await next();
+  };
+}
+
+/**
+ * Bind a soft deadline for scrape/enrichment so work stops before Vercel kills the function.
+ */
+export function requestDeadlineMiddleware(container: AppContainer) {
+  return async (_c: Context, next: Next) => {
+    const budgetMs = resolveRequestBudgetMs({
+      requestBudgetMs: container.env.REQUEST_BUDGET_MS,
+      isVercel: Boolean(process.env.VERCEL),
+      vercelMaxDurationSeconds: VERCEL_FUNCTION_MAX_DURATION_SECONDS,
+    });
+    if (!budgetMs) {
+      await next();
+      return;
+    }
+    await runWithDeadline(createDeadline(budgetMs), () => next());
   };
 }

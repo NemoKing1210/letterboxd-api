@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.6.6] - 2026-08-10
+
+### Changed
+
+- `.env.example` documents the default for every variable (from `env.ts`) when unset
+
+## [3.6.5] - 2026-08-10
+
+### Fixed
+
+- Vercel function `maxDuration` raised to **300s**; soft `REQUEST_BUDGET_MS` deadline (default headroom under that on Vercel) stops Letterboxd pagination and on-demand enrichment before the platform hard-kills the task
+- Skip film-page enrichment when `fields` does not include `genres`, `director`, or `poster`
+
 ## [3.6.4] - 2026-08-10
 
 ### Fixed

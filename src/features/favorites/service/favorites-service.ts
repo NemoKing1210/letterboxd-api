@@ -8,7 +8,7 @@ import type { Env } from '../../../app/config/env';
 import type { AppLogger } from '../../../infrastructure/logger';
 import { CACHE_KEYS, FAVORITE_RATING_THRESHOLD } from '../../../shared/constants';
 import { createPaginatedResult, type PaginatedResult } from '../../../shared/types';
-import { countBy, normalizeUsername } from '../../../shared/utils';
+import { countBy, movieFieldsNeedEnrichment, normalizeUsername } from '../../../shared/utils';
 import { toMovieDto } from '../../movies/mappers/to-movie-dto';
 import type { MovieDto } from '../../movies/schemas/movie-schemas';
 import type { FilmEnrichmentService } from '../../movies/service/film-enrichment-service';
@@ -58,7 +58,9 @@ export class FavoritesService {
       q: resolveMovieListSearch(query),
       likedOnly: true,
     });
-    const enriched = await this.deps.enrichment.enrichEntries(items);
+    const enriched = movieFieldsNeedEnrichment(query.fields)
+      ? await this.deps.enrichment.enrichEntries(items)
+      : items;
 
     return createPaginatedResult(
       enriched.map(toMovieDto),
