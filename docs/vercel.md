@@ -152,7 +152,7 @@ openssl rand -hex 32
 | `LETTERBOXD_*`                                | Timeouts, page delay, enrichment concurrency                             |
 | `CACHE_TTL`                                   | In-memory cache TTL (seconds); default is fine                           |
 | `USER_SYNC_TTL_SECONDS`                       | Auto re-sync freshness (default `43200`)                                 |
-| `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX`     | Per-IP limits                                                            |
+| `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX` / `RATE_LIMIT_EXPORT_MAX` | Per-IP limits (export bucket is stricter) |
 | `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`     | Only if outbound Letterboxd traffic must go through a proxy              |
 | `LOG_LEVEL`                                   | e.g. `info`                                                              |
 

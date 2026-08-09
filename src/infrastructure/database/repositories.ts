@@ -30,6 +30,8 @@ export type MovieListFilters = {
   likedOnly?: boolean;
   page: number;
   limit: number;
+  /** Override paginate hard cap (default MAX_LIMIT). Used by export. */
+  maxLimit?: number;
 };
 
 export type MovieSearchQuery = {
@@ -447,7 +449,7 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
       },
     };
 
-    return this.paginate(where, filters.sort, filters.page, filters.limit);
+    return this.paginate(where, filters.sort, filters.page, filters.limit, filters.maxLimit);
   }
 
   async findBySearch(
@@ -483,9 +485,10 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
     sort: MovieListSort | undefined,
     pageInput: number,
     limitInput: number,
+    maxLimit: number = MAX_LIMIT,
   ): Promise<{ items: Array<UserMovie & { movie: Movie }>; total: number }> {
     const orderBy = this.buildOrderBy(sort);
-    const limit = clamp(limitInput, 1, MAX_LIMIT);
+    const limit = clamp(limitInput, 1, maxLimit);
     const page = Math.max(1, pageInput);
     const [total, items] = await Promise.all([
       this.prisma.userMovie.count({ where }),

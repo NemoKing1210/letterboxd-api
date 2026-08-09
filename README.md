@@ -9,6 +9,7 @@ Production-ready API for analyzing Letterboxd film taste: sync user data, filter
 - Sync Letterboxd profiles into PostgreSQL
 - User profile aggregates
 - Movies API with rating / year / genre / director filters, title search, sorting, pagination
+- JSON/CSV export for movies and favorites (filters/sort, optional limit, stricter rate limit)
 - Advanced `POST /search` filter DSL for nested queries
 - Ratings, favorites, and statistics endpoints
 - Personalized recommendations (OpenAI embeddings + pgvector when configured; rule-based fallback)

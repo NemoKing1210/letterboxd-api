@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-08-09
+
+### Added
+
+- `GET /api/users/:username/movies/export/{json|csv}` and `GET /api/users/:username/favorites/export/{json|csv}` — filtered/sorted export without default pagination (optional `limit`/`page`, hard cap 10000)
+- `RATE_LIMIT_EXPORT_MAX` — stricter separate per-IP rate limit bucket for export endpoints (default 10)
+
 ## [3.4.0] - 2026-08-09
 
 ### Added

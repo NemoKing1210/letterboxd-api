@@ -24,6 +24,7 @@ import { MoviesService } from '../features/movies/service/movies-service';
 import { FilmEnrichmentService } from '../features/movies/service/film-enrichment-service';
 import { RatingsService } from '../features/ratings/service/ratings-service';
 import { FavoritesService } from '../features/favorites/service/favorites-service';
+import { ExportService } from '../features/export/service/export-service';
 import { SearchService } from '../features/search/service/search-service';
 import { StatisticsService } from '../features/statistics/service/statistics-service';
 import {
@@ -48,6 +49,7 @@ export type AppContainer = {
   moviesService: MoviesService;
   ratingsService: RatingsService;
   favoritesService: FavoritesService;
+  exportService: ExportService;
   searchService: SearchService;
   statisticsService: StatisticsService;
   recommendationService: RecommendationService;
@@ -188,6 +190,16 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
       logger,
       userSyncTtlSeconds,
     });
+  const exportService =
+    overrides?.exportService ??
+    new ExportService({
+      users,
+      userMovies,
+      syncHistory,
+      syncService,
+      logger,
+      userSyncTtlSeconds,
+    });
   const searchService =
     overrides?.searchService ??
     new SearchService({
@@ -242,6 +254,7 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
     moviesService,
     ratingsService,
     favoritesService,
+    exportService,
     searchService,
     statisticsService,
     recommendationService,

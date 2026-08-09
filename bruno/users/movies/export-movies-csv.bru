@@ -1,0 +1,30 @@
+meta {
+  name: Export Movies CSV
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/movies/export/csv?sort=rating_desc
+}
+
+params:query {
+  ~ratingMin: 4
+  ~genre: sci-fi
+  sort: rating_desc
+  ~limit: 100
+}
+
+docs {
+  Export all matching movies as CSV (UTF-8). Genres joined with `|`.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("content-type is csv", function() {
+    expect(res.getHeaders()["content-type"]).to.include("text/csv");
+  });
+}

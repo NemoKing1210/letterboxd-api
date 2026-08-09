@@ -32,6 +32,7 @@ function createTestEnv(overrides: Partial<Env> = {}): Env {
     LOG_LEVEL: 'error',
     RATE_LIMIT_WINDOW_MS: 60_000,
     RATE_LIMIT_MAX: 1000,
+    RATE_LIMIT_EXPORT_MAX: 1000,
     CORS_ORIGIN: '*',
     AUTH_ENABLED: false,
     AUTH_METHODS: ['api_key', 'bearer'],
@@ -154,6 +155,35 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
         totalPages: 1,
       })),
     } as unknown as AppContainer['favoritesService'],
+    exportService: {
+      exportMovies: vi.fn(async () => ({
+        body: JSON.stringify({
+          items: [
+            {
+              id: 'm1',
+              title: 'Arrival',
+              year: 2016,
+              slug: 'arrival',
+              url: 'https://letterboxd.com/film/arrival/',
+              poster: null,
+              genres: ['sci-fi'],
+              director: 'Denis Villeneuve',
+              rating: 4.5,
+              favorite: true,
+              watchedDate: null,
+            },
+          ],
+          total: 1,
+        }),
+        contentType: 'application/json',
+        filename: 'demo-movies.json',
+      })),
+      exportFavorites: vi.fn(async () => ({
+        body: 'id,title,year,slug,url,poster,genres,director,rating,favorite,watchedDate\r\nm1,Arrival,2016,arrival,https://letterboxd.com/film/arrival/,,sci-fi,Denis Villeneuve,4.5,true,\r\n',
+        contentType: 'text/csv; charset=utf-8',
+        filename: 'demo-favorites.csv',
+      })),
+    } as unknown as AppContainer['exportService'],
     searchService: {
       search: vi.fn(async () => ({
         items: [],
@@ -249,6 +279,53 @@ describe('API integration', () => {
       'directors',
       expect.objectContaining({ page: 1, limit: 20 }),
     );
+  });
+
+  it('exports movies as JSON and favorites as CSV', async () => {
+    const container = createTestContainer();
+    const app = createApp(container);
+
+    const jsonRes = await app.request('/api/users/demo/movies/export/json?genre=sci-fi');
+    expect(jsonRes.status).toBe(200);
+    expect(jsonRes.headers.get('content-type')).toMatch(/application\/json/);
+    expect(jsonRes.headers.get('content-disposition')).toContain('demo-movies.json');
+    const jsonBody = (await jsonRes.json()) as { items: unknown[]; total: number };
+    expect(jsonBody.total).toBe(1);
+    expect(container.exportService.exportMovies).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining({ genre: 'sci-fi' }),
+      'json',
+    );
+
+    const csvRes = await app.request('/api/users/demo/favorites/export/csv');
+    expect(csvRes.status).toBe(200);
+    expect(csvRes.headers.get('content-type')).toMatch(/text\/csv/);
+    expect(csvRes.headers.get('content-disposition')).toContain('demo-favorites.csv');
+    const csvBody = await csvRes.text();
+    expect(csvBody).toContain('Arrival');
+    expect(container.exportService.exportFavorites).toHaveBeenCalledWith(
+      'demo',
+      expect.anything(),
+      'csv',
+    );
+  });
+
+  it('applies a stricter rate limit bucket to export paths', async () => {
+    const container = createTestContainer({
+      env: createTestEnv({
+        RATE_LIMIT_MAX: 1000,
+        RATE_LIMIT_EXPORT_MAX: 2,
+      }),
+    });
+    const app = createApp(container);
+
+    expect((await app.request('/api/users/demo/movies/export/json')).status).toBe(200);
+    expect((await app.request('/api/users/demo/movies/export/json')).status).toBe(200);
+    const limited = await app.request('/api/users/demo/movies/export/json');
+    expect(limited.status).toBe(429);
+
+    const movies = await app.request('/api/users/demo/movies');
+    expect(movies.status).toBe(200);
   });
 
   it('runs advanced search', async () => {

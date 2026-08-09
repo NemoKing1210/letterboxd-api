@@ -165,6 +165,23 @@ Query params:
 
 Paginated response: `{ items: Movie[], page, limit, total, totalPages }`. Omitting `limit` still applies the default of 20 — unbounded lists are not supported.
 
+### Export
+
+`GET /api/users/:username/movies/export/:format`  
+`GET /api/users/:username/favorites/export/:format`
+
+`:format` is `json` or `csv`. Same filters/sort as `/movies` (`ratingMin`/`ratingMax`, `year`/`yearFrom`/`yearTo`, `genre`, `director`, `q`/`search`, `sort`).
+
+| Param   | Behavior                                                                 |
+| ------- | ------------------------------------------------------------------------ |
+| `limit` | Optional. Omit to export **all** matches (hard cap **10000**).           |
+| `page`  | Used only when `limit` is set (default page **1**).                      |
+
+- **JSON** — `{ items: Movie[], total }` with `Content-Type: application/json` and `Content-Disposition: attachment; filename="{username}-movies.json"` (or `...-favorites.json`).
+- **CSV** — UTF-8 CSV of the same movie fields (`genres` joined with `|`), `text/csv; charset=utf-8`, matching filename `.csv`.
+- Export uses **stored** metadata only (no on-demand Letterboxd enrichment).
+- Export uses a **stricter** per-IP rate limit (`RATE_LIMIT_EXPORT_MAX`, default **10** per `RATE_LIMIT_WINDOW_MS`), separate from the general API bucket.
+
 ### Advanced search
 
 `POST /api/users/:username/search`

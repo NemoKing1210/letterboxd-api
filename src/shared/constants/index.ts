@@ -30,6 +30,8 @@ export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 20;
 /** Hard cap for any paginated / list movie payload in the API. */
 export const MAX_LIMIT = 100;
+/** Hard cap for movie/favorites export payloads (unbounded by default, safety ceiling). */
+export const MAX_EXPORT_LIMIT = 10_000;
 /** Max length for simple `q` / `search` and advanced string values. */
 export const SEARCH_QUERY_MAX_LENGTH = 128;
 /** Max nesting depth for advanced search filter groups. */

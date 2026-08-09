@@ -1,0 +1,40 @@
+meta {
+  name: Export Movies JSON
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/movies/export/json?sort=rating_desc
+}
+
+params:query {
+  ~ratingMin: 4
+  ~ratingMax: 5
+  ~year: 2020
+  ~yearFrom: 2000
+  ~yearTo: 2024
+  ~genre: sci-fi
+  ~director: Nolan
+  ~q: matrix
+  sort: rating_desc
+  ~limit: 100
+  ~page: 1
+}
+
+docs {
+  Export all matching movies as JSON (`{ items, total }`).
+
+  Same filters/sort as List Movies. Omit `limit` to export all (hard cap 10000).
+  Stricter export rate limit applies. No on-demand enrichment.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("content-type is json", function() {
+    expect(res.getHeaders()["content-type"]).to.include("application/json");
+  });
+}

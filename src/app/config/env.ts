@@ -91,6 +91,8 @@ const envSchema = z
     LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
+    /** Stricter per-IP cap for export endpoints (heavier payloads). */
+    RATE_LIMIT_EXPORT_MAX: z.coerce.number().int().positive().default(10),
     CORS_ORIGIN: z.string().default('*'),
     AUTH_ENABLED: booleanish,
     AUTH_METHODS: z.string().optional().default('api_key,bearer'),

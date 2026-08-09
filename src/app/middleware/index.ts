@@ -44,13 +44,23 @@ export function requestLoggingMiddleware(container: AppContainer) {
 
 type RateBucket = { count: number; resetAt: number };
 
+const EXPORT_PATH_RE = /\/export\/(?:json|csv)\/?$/i;
+
+export function isExportPath(path: string): boolean {
+  return EXPORT_PATH_RE.test(path);
+}
+
 export function rateLimitMiddleware(container: AppContainer) {
   const buckets = new Map<string, RateBucket>();
   const windowMs = container.env.RATE_LIMIT_WINDOW_MS;
-  const max = container.env.RATE_LIMIT_MAX;
+  const generalMax = container.env.RATE_LIMIT_MAX;
+  const exportMax = container.env.RATE_LIMIT_EXPORT_MAX;
 
   return async (c: Context, next: Next) => {
-    const key = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'local';
+    const ip = c.req.header('x-forwarded-for')?.split(',')[0]?.trim() || 'local';
+    const exportRequest = isExportPath(c.req.path);
+    const key = exportRequest ? `${ip}:export` : ip;
+    const max = exportRequest ? exportMax : generalMax;
     const now = Date.now();
     let bucket = buckets.get(key);
 

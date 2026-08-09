@@ -1,0 +1,27 @@
+meta {
+  name: Export Favorites JSON
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/favorites/export/json?sort=rating_desc
+}
+
+params:query {
+  ~ratingMin: 4
+  ~genre: sci-fi
+  sort: rating_desc
+  ~limit: 100
+}
+
+docs {
+  Export favorite movies (liked or rating ≥ 4.5) as JSON.
+  Same filters/sort as List Favorites; omit `limit` for all matches (cap 10000).
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

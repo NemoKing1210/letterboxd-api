@@ -21,6 +21,11 @@ import {
   namedCountSchema,
 } from '../features/favorites/schemas/favorites-schemas';
 import { movieDtoSchema } from '../features/movies/schemas/movie-schemas';
+import {
+  exportFormatSchema,
+  movieExportJsonSchema,
+  movieExportQuerySchema,
+} from '../features/export/schemas/export-schemas';
 import { searchBodyOpenApiSchema, searchBodySchema } from '../features/search/schemas/search-schemas';
 import { movieQuerySchema, usernameParamSchema, userProfileSchema, userQuerySchema } from '../features/users/schemas/user-schemas';
 import { syncResponseSchema } from '../features/synchronization/schemas/sync-schemas';
@@ -30,6 +35,10 @@ type AppVariables = {
   requestId: string;
   authMethod?: AuthMethod;
 };
+
+const exportRouteParamsSchema = usernameParamSchema.extend({
+  format: exportFormatSchema,
+});
 
 const ErrorSchema = z.object({
   error: z.object({
@@ -259,6 +268,36 @@ export function createApp(container: AppContainer) {
     return c.json(result, 200);
   });
 
+  const exportMoviesRoute = createRoute({
+    method: 'get',
+    path: '/api/users/{username}/movies/export/{format}',
+    tags: ['Movies'],
+    summary: 'Export user movies as JSON or CSV',
+    description:
+      'Same filters/sort as list movies. Omit `limit` to export all matches (capped at 10000). Stricter rate limit applies. Uses stored metadata only (no on-demand enrichment).',
+    request: {
+      params: exportRouteParamsSchema,
+      query: movieExportQuerySchema,
+    },
+    responses: {
+      200: {
+        description: 'Exported movies',
+        content: {
+          'application/json': { schema: movieExportJsonSchema },
+          'text/csv': { schema: z.string() },
+        },
+      },
+    },
+  });
+
+  app.openapi(exportMoviesRoute, async (c) => {
+    const { username, format } = c.req.valid('param');
+    const query = c.req.valid('query');
+    const result = await container.exportService.exportMovies(username, query, format);
+    c.header('Content-Disposition', `attachment; filename="${result.filename}"`);
+    return c.body(result.body, 200, { 'Content-Type': result.contentType });
+  });
+
   const getRatingsRoute = createRoute({
     method: 'get',
     path: '/api/users/{username}/ratings',
@@ -301,6 +340,36 @@ export function createApp(container: AppContainer) {
     const query = c.req.valid('query');
     const result = await container.favoritesService.listFavoriteMovies(username, query);
     return c.json(result, 200);
+  });
+
+  const exportFavoritesRoute = createRoute({
+    method: 'get',
+    path: '/api/users/{username}/favorites/export/{format}',
+    tags: ['Favorites'],
+    summary: 'Export favorite movies as JSON or CSV',
+    description:
+      'Same filters/sort as list favorites. Omit `limit` to export all matches (capped at 10000). Stricter rate limit applies. Uses stored metadata only (no on-demand enrichment).',
+    request: {
+      params: exportRouteParamsSchema,
+      query: movieExportQuerySchema,
+    },
+    responses: {
+      200: {
+        description: 'Exported favorite movies',
+        content: {
+          'application/json': { schema: movieExportJsonSchema },
+          'text/csv': { schema: z.string() },
+        },
+      },
+    },
+  });
+
+  app.openapi(exportFavoritesRoute, async (c) => {
+    const { username, format } = c.req.valid('param');
+    const query = c.req.valid('query');
+    const result = await container.exportService.exportFavorites(username, query, format);
+    c.header('Content-Disposition', `attachment; filename="${result.filename}"`);
+    return c.body(result.body, 200, { 'Content-Type': result.contentType });
   });
 
   const searchMoviesRoute = createRoute({
@@ -503,9 +572,9 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '3.4.0',
+      version: '3.5.0',
       description:
-        'Analyze Letterboxd film taste: sync, filter, search, statistics, and AI recommendations (embeddings + optional LLM).',
+        'Analyze Letterboxd film taste: sync, filter, search, statistics, AI recommendations, and movie/favorites export (JSON/CSV).',
     },
     servers: [{ url: '/' }],
     ...(container.authenticator.enabled
