@@ -5,20 +5,10 @@ import {
   ensureLocalUser,
   type UserSyncTrigger,
 } from '../../users/service/ensure-local-user';
-import type { MovieQuery } from '../schemas/movie-schemas';
+import { toMovieDto } from '../mappers/to-movie-dto';
+import type { MovieDto, MovieQuery } from '../schemas/movie-schemas';
 
-export type MovieDto = {
-  id: string;
-  title: string;
-  year: number | null;
-  slug: string | null;
-  poster: string | null;
-  genres: string[];
-  director: string | null;
-  rating: number | null;
-  favorite: boolean;
-  watchedDate: string | null;
-};
+export type { MovieDto };
 
 export type MoviesServiceDeps = {
   users: UserRepository;
@@ -36,19 +26,11 @@ export class MoviesService {
 
     const { items, total } = await this.deps.userMovies.findFiltered(user.id, query);
 
-    const mapped: MovieDto[] = items.map((entry) => ({
-      id: entry.movie.id,
-      title: entry.movie.title,
-      year: entry.movie.year,
-      slug: entry.movie.slug,
-      poster: entry.movie.poster,
-      genres: entry.movie.genres,
-      director: entry.movie.director,
-      rating: entry.rating,
-      favorite: entry.favorite,
-      watchedDate: entry.watchedDate?.toISOString() ?? null,
-    }));
-
-    return createPaginatedResult(mapped, total, query.page, query.limit);
+    return createPaginatedResult(
+      items.map(toMovieDto),
+      total,
+      query.page,
+      query.limit,
+    );
   }
 }

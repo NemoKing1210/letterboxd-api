@@ -1,8 +1,8 @@
 export const CACHE_KEYS = {
   userProfile: (username: string) => `user:profile:${username.toLowerCase()}`,
   userStats: (username: string) => `user:stats:${username.toLowerCase()}`,
-  userRatings: (username: string) => `user:ratings:${username.toLowerCase()}`,
-  userFavorites: (username: string) => `user:favorites:${username.toLowerCase()}`,
+  userRatings: (username: string) => `user:ratings:v2:${username.toLowerCase()}`,
+  userFavorites: (username: string) => `user:favorites:v2:${username.toLowerCase()}`,
 } as const;
 
 export const DEFAULT_PAGE = 1;

@@ -16,3 +16,5 @@ export const movieDtoSchema = z.object({
   favorite: z.boolean(),
   watchedDate: z.string().nullable(),
 });
+
+export type MovieDto = z.infer<typeof movieDtoSchema>;

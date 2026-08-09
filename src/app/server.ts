@@ -8,6 +8,7 @@ import {
   requestLoggingMiddleware,
   securityHeadersMiddleware,
 } from './middleware';
+import { movieDtoSchema } from '../features/movies/schemas/movie-schemas';
 import { movieQuerySchema, usernameParamSchema, userProfileSchema } from '../features/users/schemas/user-schemas';
 import { syncResponseSchema } from '../features/synchronization/schemas/sync-schemas';
 import { AppError } from '../shared/errors/app-error';
@@ -25,21 +26,8 @@ const ErrorSchema = z.object({
   }),
 });
 
-const MovieDtoSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  year: z.number().nullable(),
-  slug: z.string().nullable(),
-  poster: z.string().nullable(),
-  genres: z.array(z.string()),
-  director: z.string().nullable(),
-  rating: z.number().nullable(),
-  favorite: z.boolean(),
-  watchedDate: z.string().nullable(),
-});
-
 const PaginatedMoviesSchema = z.object({
-  items: z.array(MovieDtoSchema),
+  items: z.array(movieDtoSchema),
   page: z.number(),
   limit: z.number(),
   total: z.number(),
@@ -49,34 +37,13 @@ const PaginatedMoviesSchema = z.object({
 const RatingsSchema = z.object({
   averageRating: z.number().nullable(),
   ratingsCount: z.number(),
-  bestMovies: z.array(
-    z.object({
-      title: z.string(),
-      year: z.number().nullable(),
-      rating: z.number(),
-      slug: z.string().nullable(),
-    }),
-  ),
-  worstMovies: z.array(
-    z.object({
-      title: z.string(),
-      year: z.number().nullable(),
-      rating: z.number(),
-      slug: z.string().nullable(),
-    }),
-  ),
+  bestMovies: z.array(movieDtoSchema),
+  worstMovies: z.array(movieDtoSchema),
   distribution: z.record(z.number()),
 });
 
 const FavoritesSchema = z.object({
-  favoriteMovies: z.array(
-    z.object({
-      title: z.string(),
-      year: z.number().nullable(),
-      rating: z.number().nullable(),
-      slug: z.string().nullable(),
-    }),
-  ),
+  favoriteMovies: z.array(movieDtoSchema),
   favoriteDirectors: z.array(z.object({ name: z.string(), count: z.number() })),
   favoriteGenres: z.array(z.object({ name: z.string(), count: z.number() })),
   favoriteYears: z.array(z.object({ name: z.string(), count: z.number() })),
@@ -336,7 +303,7 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '1.1.1',
+      version: '1.2.0',
       description:
         'Analyze Letterboxd film taste: sync, filter, statistics, and AI-ready recommendations.',
     },

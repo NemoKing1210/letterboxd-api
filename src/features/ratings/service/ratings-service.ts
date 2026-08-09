@@ -3,6 +3,8 @@ import type { UserMovieRepository, UserRepository } from '../../../infrastructur
 import type { Env } from '../../../app/config/env';
 import { CACHE_KEYS } from '../../../shared/constants';
 import { average, normalizeUsername } from '../../../shared/utils';
+import { toMovieDto } from '../../movies/mappers/to-movie-dto';
+import type { MovieDto } from '../../movies/schemas/movie-schemas';
 import {
   ensureLocalUser,
   type UserSyncTrigger,
@@ -11,8 +13,8 @@ import {
 export type RatingsSummary = {
   averageRating: number | null;
   ratingsCount: number;
-  bestMovies: Array<{ title: string; year: number | null; rating: number; slug: string | null }>;
-  worstMovies: Array<{ title: string; year: number | null; rating: number; slug: string | null }>;
+  bestMovies: MovieDto[];
+  worstMovies: MovieDto[];
   distribution: Record<string, number>;
 };
 
@@ -47,18 +49,11 @@ export class RatingsService {
       distribution[key] = (distribution[key] ?? 0) + 1;
     }
 
-    const toMovie = (e: (typeof rated)[number]) => ({
-      title: e.movie.title,
-      year: e.movie.year,
-      rating: e.rating,
-      slug: e.movie.slug,
-    });
-
     const summary: RatingsSummary = {
       averageRating: average(rated.map((r) => r.rating)),
       ratingsCount: rated.length,
-      bestMovies: rated.slice(0, 10).map(toMovie),
-      worstMovies: [...rated].sort((a, b) => a.rating - b.rating).slice(0, 10).map(toMovie),
+      bestMovies: rated.slice(0, 10).map(toMovieDto),
+      worstMovies: [...rated].sort((a, b) => a.rating - b.rating).slice(0, 10).map(toMovieDto),
       distribution,
     };
 

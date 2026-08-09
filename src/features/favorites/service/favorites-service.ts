@@ -3,13 +3,15 @@ import type { UserMovieRepository, UserRepository } from '../../../infrastructur
 import type { Env } from '../../../app/config/env';
 import { CACHE_KEYS } from '../../../shared/constants';
 import { countBy, normalizeUsername, topN } from '../../../shared/utils';
+import { toMovieDto } from '../../movies/mappers/to-movie-dto';
+import type { MovieDto } from '../../movies/schemas/movie-schemas';
 import {
   ensureLocalUser,
   type UserSyncTrigger,
 } from '../../users/service/ensure-local-user';
 
 export type FavoritesSummary = {
-  favoriteMovies: Array<{ title: string; year: number | null; rating: number | null; slug: string | null }>;
+  favoriteMovies: MovieDto[];
   favoriteDirectors: Array<{ name: string; count: number }>;
   favoriteGenres: Array<{ name: string; count: number }>;
   favoriteYears: Array<{ name: string; count: number }>;
@@ -49,12 +51,7 @@ export class FavoritesService {
       favoriteMovies: liked
         .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
         .slice(0, 20)
-        .map((e) => ({
-          title: e.movie.title,
-          year: e.movie.year,
-          rating: e.rating,
-          slug: e.movie.slug,
-        })),
+        .map(toMovieDto),
       favoriteDirectors: topN(countBy(liked, (e) => e.movie.director), 10),
       favoriteGenres: topN(genreCounts, 10),
       favoriteYears: topN(

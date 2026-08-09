@@ -30,6 +30,27 @@ All user-scoped `GET` endpoints below auto-sync from Letterboxd when the usernam
 }
 ```
 
+### Movie object
+
+Wherever the API returns a film (list item or nested in summaries), it uses the same shape:
+
+```json
+{
+  "id": "clx...",
+  "title": "Arrival",
+  "year": 2016,
+  "slug": "arrival",
+  "poster": "https://...",
+  "genres": ["sci-fi", "drama"],
+  "director": "Denis Villeneuve",
+  "rating": 4.5,
+  "favorite": true,
+  "watchedDate": "2024-06-01T12:00:00.000Z"
+}
+```
+
+Used by: `/movies` (`items`), `/ratings` (`bestMovies` / `worstMovies`), `/favorites` (`favoriteMovies`).
+
 ### Movies
 
 `GET /api/users/:username/movies`
@@ -46,18 +67,19 @@ Query params:
 | `sort` | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
 | `page` / `limit` | Pagination (`limit` max 100) |
 
+Paginated response: `{ items: Movie[], page, limit, total, totalPages }`.
+
 ### Ratings
 
 `GET /api/users/:username/ratings`
 
-Returns average, count, best/worst films, rating distribution.
+Returns average, count, best/worst films (full `Movie` objects), rating distribution.
 
 ### Favorites
 
 `GET /api/users/:username/favorites`
 
-Favorite movies (liked or ≥ 4.5), directors, genres, years.
-
+Favorite movies (liked or ≥ 4.5) as full `Movie` objects, plus directors, genres, years.
 ### Statistics
 
 `GET /api/users/:username/statistics`
