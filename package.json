@@ -1,6 +1,6 @@
 {
   "name": "letterboxd-api",
-  "version": "3.2.1",
+  "version": "3.2.3",
   "description": "Production-ready Letterboxd API — analyze, filter, and understand film taste",
   "type": "module",
   "main": "dist/index.js",

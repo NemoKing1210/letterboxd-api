@@ -14,8 +14,8 @@ ChatGPT chooses an Action from the curated OpenAPI schema, calls your deployed A
 
 ## Prerequisites
 
-1. API deployed on a **public HTTPS** URL (e.g. Vercel). `localhost` is not reachable from ChatGPT without a tunnel.
-2. PostgreSQL with migrations applied (`bun run db:migrate` / `db:migrate:deploy`).
+1. API deployed on a **public HTTPS** URL (e.g. Vercel — see [vercel.md](vercel.md)). `localhost` is not reachable from ChatGPT without a tunnel.
+2. PostgreSQL with migrations applied (`bun run db:migrate` / `db:migrate:deploy`). Supabase: [supabase.md](supabase.md).
 3. Auth enabled for production:
    ```env
    AUTH_ENABLED=true

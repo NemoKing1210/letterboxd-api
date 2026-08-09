@@ -10,12 +10,15 @@ Letterboxd API — project documentation.
 | [api.md](api.md) | REST endpoints, query params, error format |
 | [chatgpt-actions.md](chatgpt-actions.md) | Connect the API to ChatGPT Custom GPT Actions |
 | [database.md](database.md) | Prisma models, ER diagram, migrations |
-| [development.md](development.md) | Local setup, scripts, contributing workflow |
+| [supabase.md](supabase.md) | Supabase Postgres: project, pgvector, migrations, URLs |
+| [vercel.md](vercel.md) | Deploy on Vercel (env vars, verify, troubleshooting) |
+| [development.md](development.md) | Pointer to root [DEVELOPMENT.md](../DEVELOPMENT.md) |
 | [roadmap.md](roadmap.md) | v1–v4 product roadmap |
 
 ## Also see
 
-- [README.md](../README.md) — quick start and overview
+- [README.md](../README.md) — project overview
+- [DEVELOPMENT.md](../DEVELOPMENT.md) — local setup, env, scripts
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — branch and commit conventions
 - [ROADMAP.md](../ROADMAP.md) — high-level roadmap checklist
 - [CHANGELOG.md](../CHANGELOG.md) — release history

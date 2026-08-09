@@ -2,6 +2,8 @@
 
 PostgreSQL via Prisma. Configure either discrete `DB_*` variables or a full `DATABASE_URL` (Supabase / managed). If both are set, `DATABASE_URL` wins.
 
+Production database setup: **[supabase.md](supabase.md)**. Deploy the API: **[vercel.md](vercel.md)**.
+
 ## ER diagram
 
 ```mermaid
