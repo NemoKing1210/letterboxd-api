@@ -49,27 +49,27 @@ bun run dev
 
 ## Environment
 
-| Variable | Description |
-| --- | --- |
-| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `DB_SCHEMA` | Discrete PostgreSQL settings (OpenServer-friendly) |
-| `DATABASE_URL` | Optional full URL; if set, overrides `DB_*` |
-| `SUPABASE_URL` / `SUPABASE_KEY` | Optional; reserved — app uses Prisma + `DATABASE_URL` only (see [docs/supabase.md](docs/supabase.md)) |
-| `HTTPS_PROXY` / `HTTP_PROXY` | Optional outbound proxy URL (`http://user:pass@host:port`) for Letterboxd and other external HTTP |
-| `NO_PROXY` | Comma-separated hosts that bypass the proxy |
-| `LETTERBOXD_TIMEOUT` | Scraper HTTP timeout (ms) |
-| `LETTERBOXD_PAGE_DELAY_MS` | Delay between scrape list pages |
-| `LETTERBOXD_MAX_PAGES` | Max pages per list scrape |
-| `LETTERBOXD_ENRICH_CONCURRENCY` | Parallel on-demand film-page enrichments when serving responses (default 8) |
-| `LETTERBOXD_ENRICH_RETRIES` | Retries per film during on-demand enrichment (default 3) |
-| `CACHE_TTL` | In-memory cache TTL (seconds) |
-| `USER_SYNC_TTL_SECONDS` | Re-sync on user GET when last successful sync is older (default 43200 = 12h; `0` = only when user missing) |
-| `RATE_LIMIT_*` | Per-IP rate limiting |
-| `CORS_ORIGIN` | Allowed origins (`*` or CSV) |
-| `AUTH_ENABLED` | Enable API auth (`true`/`false`, default `false`) |
-| `AUTH_METHODS` | CSV: `api_key`, `bearer`, `basic` (default `api_key,bearer`) |
-| `AUTH_TOKENS` | CSV secrets for `api_key` / `bearer` (required when those methods are enabled) |
-| `AUTH_BASIC_USERNAME` / `AUTH_BASIC_PASSWORD` | HTTP Basic credentials (required when `basic` is enabled) |
-| `AUTH_PUBLIC_PATHS` | CSV exact paths that skip auth (default `/health,/privacy,/openapi-gpt-actions.yaml`) |
+| Variable                                                                    | Description                                                                                                |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `DB_HOST` / `DB_PORT` / `DB_USER` / `DB_PASSWORD` / `DB_NAME` / `DB_SCHEMA` | Discrete PostgreSQL settings (OpenServer-friendly)                                                         |
+| `DATABASE_URL`                                                              | Optional full URL; if set, overrides `DB_*`                                                                |
+| `SUPABASE_URL` / `SUPABASE_KEY`                                             | Optional; reserved — app uses Prisma + `DATABASE_URL` only (see [docs/supabase.md](docs/supabase.md))      |
+| `HTTPS_PROXY` / `HTTP_PROXY`                                                | Optional outbound proxy URL (`http://user:pass@host:port`) for Letterboxd and other external HTTP          |
+| `NO_PROXY`                                                                  | Comma-separated hosts that bypass the proxy                                                                |
+| `LETTERBOXD_TIMEOUT`                                                        | Scraper HTTP timeout (ms)                                                                                  |
+| `LETTERBOXD_PAGE_DELAY_MS`                                                  | Delay between scrape list pages                                                                            |
+| `LETTERBOXD_MAX_PAGES`                                                      | Max pages per list scrape                                                                                  |
+| `LETTERBOXD_ENRICH_CONCURRENCY`                                             | Parallel on-demand film-page enrichments when serving responses (default 8)                                |
+| `LETTERBOXD_ENRICH_RETRIES`                                                 | Retries per film during on-demand enrichment (default 3)                                                   |
+| `CACHE_TTL`                                                                 | In-memory cache TTL (seconds)                                                                              |
+| `USER_SYNC_TTL_SECONDS`                                                     | Re-sync on user GET when last successful sync is older (default 43200 = 12h; `0` = only when user missing) |
+| `RATE_LIMIT_*`                                                              | Per-IP rate limiting                                                                                       |
+| `CORS_ORIGIN`                                                               | Allowed origins (`*` or CSV)                                                                               |
+| `AUTH_ENABLED`                                                              | Enable API auth (`true`/`false`, default `false`)                                                          |
+| `AUTH_METHODS`                                                              | CSV: `api_key`, `bearer`, `basic` (default `api_key,bearer`)                                               |
+| `AUTH_TOKENS`                                                               | CSV secrets for `api_key` / `bearer` (required when those methods are enabled)                             |
+| `AUTH_BASIC_USERNAME` / `AUTH_BASIC_PASSWORD`                               | HTTP Basic credentials (required when `basic` is enabled)                                                  |
+| `AUTH_PUBLIC_PATHS`                                                         | CSV exact paths that skip auth (default `/health,/privacy,/openapi-gpt-actions.yaml`)                      |
 
 Full reference: [`.env.example`](.env.example). Auth details: [docs/api.md](docs/api.md#authentication).
 
@@ -100,6 +100,8 @@ bun run typecheck     # tsc --noEmit
 bun run format        # prettier
 bun run format:check  # prettier check
 bun run build         # bun build
+bun run db:migrate    # prisma migrate dev + sync supabase/migrations
+bun run db:sync:supabase  # regenerate supabase/migrations from Prisma
 bun run db:studio     # prisma studio
 bun run setup:vercel  # link project + pull .env.local
 bun run vercel:dev    # local server shaped like Vercel
@@ -123,6 +125,8 @@ src/app             HTTP, DI, config, middleware
 src/features        domain use-cases by feature
 src/infrastructure  Prisma, Letterboxd scraper, cache, logger
 src/shared          errors, utils, constants, types
+prisma/             schema + Prisma migrations
+supabase/           CLI config + mirrored migrations (GitHub integration)
 tests/fixtures      HTML fixtures for scraper
 tests/integration   API tests with mocked services
 ```

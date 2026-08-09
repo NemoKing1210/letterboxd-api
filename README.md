@@ -19,16 +19,16 @@ Production-ready API for analyzing Letterboxd film taste: sync user data, filter
 
 ## Stack
 
-| Layer | Technology |
-| --- | --- |
-| Runtime | Bun |
-| HTTP | Hono + Zod OpenAPI |
-| Database | PostgreSQL (Supabase-compatible) |
-| ORM | Prisma |
-| Validation | Zod |
-| Logging | Pino |
-| Deploy | Vercel Serverless |
-| Tests | Vitest |
+| Layer      | Technology                       |
+| ---------- | -------------------------------- |
+| Runtime    | Bun                              |
+| HTTP       | Hono + Zod OpenAPI               |
+| Database   | PostgreSQL (Supabase-compatible) |
+| ORM        | Prisma                           |
+| Validation | Zod                              |
+| Logging    | Pino                             |
+| Deploy     | Vercel Serverless                |
+| Tests      | Vitest                           |
 
 ## Quick start
 
@@ -48,19 +48,19 @@ Full local setup: **[DEVELOPMENT.md](DEVELOPMENT.md)**. Production: **[Supabase]
 
 ## Documentation
 
-| Document | Description |
-| --- | --- |
-| [DEVELOPMENT.md](DEVELOPMENT.md) | Local setup, env, scripts, Bruno |
-| [docs/supabase.md](docs/supabase.md) | Supabase Postgres: Connect modes, pgvector, migrations |
-| [docs/vercel.md](docs/vercel.md) | Deploy on Vercel (fast path, CI, env) |
-| [docs/architecture.md](docs/architecture.md) | Layers, sync flow, extension points |
-| [docs/api.md](docs/api.md) | REST endpoints, query params, errors |
-| [docs/database.md](docs/database.md) | Prisma models, ER diagram, migrations |
-| [docs/chatgpt-actions.md](docs/chatgpt-actions.md) | ChatGPT Custom GPT Actions |
-| [docs/roadmap.md](docs/roadmap.md) | Product roadmap (v1–v4) |
-| [CONTRIBUTING.md](CONTRIBUTING.md) | Branches, commits, PR workflow |
-| [CHANGELOG.md](CHANGELOG.md) | Release history |
-| [docs/](docs/README.md) | Full documentation index |
+| Document                                           | Description                                                   |
+| -------------------------------------------------- | ------------------------------------------------------------- |
+| [DEVELOPMENT.md](DEVELOPMENT.md)                   | Local setup, env, scripts, Bruno                              |
+| [docs/supabase.md](docs/supabase.md)               | Supabase Postgres: Connect modes, pgvector, GitHub migrations |
+| [docs/vercel.md](docs/vercel.md)                   | Deploy on Vercel (fast path, CI, env)                         |
+| [docs/architecture.md](docs/architecture.md)       | Layers, sync flow, extension points                           |
+| [docs/api.md](docs/api.md)                         | REST endpoints, query params, errors                          |
+| [docs/database.md](docs/database.md)               | Prisma models, ER diagram, migrations                         |
+| [docs/chatgpt-actions.md](docs/chatgpt-actions.md) | ChatGPT Custom GPT Actions                                    |
+| [docs/roadmap.md](docs/roadmap.md)                 | Product roadmap (v1–v4)                                       |
+| [CONTRIBUTING.md](CONTRIBUTING.md)                 | Branches, commits, PR workflow                                |
+| [CHANGELOG.md](CHANGELOG.md)                       | Release history                                               |
+| [docs/](docs/README.md)                            | Full documentation index                                      |
 
 Bruno collection: open [`bruno/`](bruno/) in [Bruno](https://www.usebruno.com/) (see [DEVELOPMENT.md](DEVELOPMENT.md#bruno)).
 

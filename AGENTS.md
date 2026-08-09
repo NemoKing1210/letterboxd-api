@@ -16,12 +16,12 @@ features depend on ports (interfaces)
 infrastructure implements ports
 ```
 
-| Layer | Path | Role |
-| --- | --- | --- |
-| App | `src/app/` | HTTP, middleware, DI (`container.ts`), env |
-| Features | `src/features/` | Use-cases: service + schemas + types |
-| Infrastructure | `src/infrastructure/` | Prisma, Letterboxd scraper, cache, logger |
-| Shared | `src/shared/` | Errors, constants, pure utils, shared types |
+| Layer          | Path                  | Role                                        |
+| -------------- | --------------------- | ------------------------------------------- |
+| App            | `src/app/`            | HTTP, middleware, DI (`container.ts`), env  |
+| Features       | `src/features/`       | Use-cases: service + schemas + types        |
+| Infrastructure | `src/infrastructure/` | Prisma, Letterboxd scraper, cache, logger   |
+| Shared         | `src/shared/`         | Errors, constants, pure utils, shared types |
 
 - Wire new dependencies only in `src/app/container.ts`.
 - Do not import infrastructure concretes from features — inject via interfaces.
@@ -53,9 +53,11 @@ infrastructure implements ports
 
 ## Database
 
-- Schema changes only via Prisma (`prisma/schema.prisma` + migrations).
+- Schema changes only via Prisma (`prisma/schema.prisma` + `prisma/migrations`).
+- After adding a Prisma migration, keep `supabase/migrations/` in sync (`bun run db:sync:supabase`, also chained from `db:migrate`) so Supabase GitHub integration can apply the same SQL.
 - Prefer upserts keyed by stable IDs (`User.username`, `Movie.slug`).
 - Do not bypass repositories for feature logic.
+- Do not apply the same new migration twice on one database (Prisma `migrate deploy` **and** Supabase production deploy).
 
 ## Cache
 
@@ -76,10 +78,10 @@ Follow [Semantic Versioning](https://semver.org/): `MAJOR.MINOR.PATCH`.
 
 **Mandatory on every change:** whenever an agent lands code, docs, config, or other project changes, bump the version and document it in the same change set. Do not leave work without a version bump and changelog entry.
 
-| Change type | Bump | Examples |
-| --- | --- | --- |
-| Breaking API / schema / behavior | `MAJOR` | remove endpoint, change response shape |
-| New backward-compatible feature | `MINOR` | new endpoint, optional query param |
+| Change type                                          | Bump    | Examples                                                                  |
+| ---------------------------------------------------- | ------- | ------------------------------------------------------------------------- |
+| Breaking API / schema / behavior                     | `MAJOR` | remove endpoint, change response shape                                    |
+| New backward-compatible feature                      | `MINOR` | new endpoint, optional query param                                        |
 | Bug fix, docs, chore, internal refactor, small tweak | `PATCH` | scraper fix, typo, dependency bump, agent rule update (`1.0.0` → `1.0.1`) |
 
 In the same change, update **all** of these:

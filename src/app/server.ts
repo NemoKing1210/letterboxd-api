@@ -503,7 +503,7 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '3.3.3',
+      version: '3.4.0',
       description:
         'Analyze Letterboxd film taste: sync, filter, search, statistics, and AI recommendations (embeddings + optional LLM).',
     },

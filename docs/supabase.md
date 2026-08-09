@@ -17,11 +17,11 @@ Local Bun / Vercel API
 
 ## What you need
 
-| Item | Why |
-| --- | --- |
-| [Supabase](https://supabase.com/) account | Hosted Postgres |
-| Bun locally | Run migrations (`bun run db:migrate:deploy`) |
-| This repository cloned | Migration files live in `prisma/migrations/` |
+| Item                                      | Why                                                                                     |
+| ----------------------------------------- | --------------------------------------------------------------------------------------- |
+| [Supabase](https://supabase.com/) account | Hosted Postgres                                                                         |
+| Bun locally                               | Author migrations (`bun run db:migrate`) and optional manual deploy                     |
+| This repository cloned                    | Schema in `prisma/migrations/`; mirror in `supabase/migrations/` for GitHub integration |
 
 After Supabase is ready, deploy the API with the [Vercel guide](vercel.md) (or keep running locally against Supabase).
 
@@ -34,10 +34,10 @@ After Supabase is ready, deploy the API with the [Vercel guide](vercel.md) (or k
 
 ### Project options that matter for this API
 
-| Setting | Recommendation for Letterboxd API |
-| --- | --- |
+| Setting                                           | Recommendation for Letterboxd API                                                                                                                                                                                                                                                               |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Data API** (“Automatically expose new tables…”) | Optional. This app uses Prisma over a Postgres connection string, not PostgREST / `supabase-js`. You can leave the Data API on for Table Editor convenience, or [turn it off](https://supabase.com/dashboard/project/_/settings/api) if you only use Prisma (official Prisma guide suggestion). |
-| **Auth / Storage / Edge Functions** | Not used by this API today |
+| **Auth / Storage / Edge Functions**               | Not used by this API today                                                                                                                                                                                                                                                                      |
 
 Prisma connections are **not** affected by the [Data API default-grant change](https://supabase.com/changelog/45329-breaking-change-tables-not-exposed-to-data-and-graphql-api-automatically) (rollout through 2026-10-30). That change only affects REST/GraphQL/`supabase-js` access.
 
@@ -63,10 +63,10 @@ Open the project dashboard and click **[Connect](https://supabase.com/dashboard/
 
 Supabase exposes several ways to reach Postgres. For this repo you typically need **two**:
 
-| Use | Mode | Host / port (typical) | IP |
-| --- | --- | --- | --- |
-| **Migrations** (`db:migrate:deploy`) | **Direct** *or* **Session pooler** | `db.<project-ref>.supabase.co:5432` *or* `aws-<region>.pooler.supabase.com:5432` | Direct is **IPv6** by default; session pooler is **IPv4** |
-| **App runtime** (local Bun or Vercel) | **Transaction pooler** (Shared / Supavisor) | `aws-<region>.pooler.supabase.com:6543` | **IPv4** (works from Vercel / most home networks) |
+| Use                                   | Mode                                        | Host / port (typical)                                                            | IP                                                        |
+| ------------------------------------- | ------------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| **Migrations** (`db:migrate:deploy`)  | **Direct** _or_ **Session pooler**          | `db.<project-ref>.supabase.co:5432` _or_ `aws-<region>.pooler.supabase.com:5432` | Direct is **IPv6** by default; session pooler is **IPv4** |
+| **App runtime** (local Bun or Vercel) | **Transaction pooler** (Shared / Supavisor) | `aws-<region>.pooler.supabase.com:6543`                                          | **IPv4** (works from Vercel / most home networks)         |
 
 Optional on **Pro+**: **Dedicated pooler** (PgBouncer) at `db.<project-ref>.supabase.co:6543` — lower latency, same transaction-mode rules; IPv6 unless you buy the [IPv4 add-on](https://supabase.com/docs/guides/platform/ipv4-address).
 
@@ -128,28 +128,28 @@ This project uses a **single** `DATABASE_URL` (see `prisma/schema.prisma`). Swap
 If the password contains reserved URL characters, encode them in the URL:
 
 | Character | Encoded |
-| --- | --- |
-| `@` | `%40` |
-| `#` | `%23` |
-| `%` | `%25` |
-| `/` | `%2F` |
-| `:` | `%3A` |
-| `?` | `%3F` |
+| --------- | ------- |
+| `@`       | `%40`   |
+| `#`       | `%23`   |
+| `%`       | `%25`   |
+| `/`       | `%2F`   |
+| `:`       | `%3A`   |
+| `?`       | `%3F`   |
 
 Example: password `p@ss` → userinfo `postgres:p%40ss` (or `postgres.REF:p%40ss` on the pooler).
 
 ### IPv4 / network
 
-| Situation | What to use |
-| --- | --- |
-| Local migrations, IPv6 works | Direct `:5432` |
-| Local migrations, IPv4-only | Session pooler `:5432` |
-| Vercel / serverless runtime | Transaction pooler `:6543` + `pgbouncer=true` |
+| Situation                       | What to use                                                                  |
+| ------------------------------- | ---------------------------------------------------------------------------- |
+| Local migrations, IPv6 works    | Direct `:5432`                                                               |
+| Local migrations, IPv4-only     | Session pooler `:5432`                                                       |
+| Vercel / serverless runtime     | Transaction pooler `:6543` + `pgbouncer=true`                                |
 | Need Direct/Dedicated over IPv4 | [IPv4 add-on](https://supabase.com/docs/guides/platform/ipv4-address) (paid) |
 
 Network restrictions: Dashboard → **Database** settings / network controls. Default projects accept connections; if connect fails, check bans, pause state (free tier), and Observability → Database.
 
-## 4. Apply Prisma migrations
+## 4. Apply migrations (one-shot / local)
 
 From the repo root, with a **migrate-capable** `DATABASE_URL` (Direct or Session pooler — **not** transaction `:6543`):
 
@@ -179,20 +179,70 @@ bun run db:migrate:deploy
 
 Success looks like Prisma applying migrations under `prisma/migrations/` with no error. Optionally open **Table Editor** and confirm tables (`User`, `Movie`, `UserMovie`, `SyncHistory`, embedding tables, …).
 
+For **hosted production without putting a DB URL in GitHub Actions**, prefer [GitHub integration](#github-integration-migrations) below instead of (or after) this one-time Prisma deploy.
+
 ### Dev vs deploy commands
 
-| Command | When |
-| --- | --- |
-| `bun run db:migrate:deploy` | **Production / Supabase** — applies existing migrations |
-| `bun run db:migrate` | Local **dev** only — can create new migration files |
+| Command                                  | When                                                                       |
+| ---------------------------------------- | -------------------------------------------------------------------------- |
+| `bun run db:migrate`                     | Local **dev** — creates Prisma migrations and syncs `supabase/migrations/` |
+| `bun run db:sync:supabase`               | Regenerate `supabase/migrations/` from Prisma only                         |
+| `bun run db:migrate:deploy`              | Apply Prisma migrations (local / one-shot / optional CI)                   |
+| Supabase GitHub **Deploy to production** | Apply mirrored SQL on merge to the production branch                       |
 
-Do **not** use `migrate dev` against a shared production Supabase project.
+Do **not** use `migrate dev` against a shared production Supabase project. Do **not** apply the same new migration via both Prisma deploy and Supabase production deploy.
 
 ### Optional: dedicated Prisma DB role
 
 Supabase’s [Prisma guide](https://supabase.com/docs/guides/database/prisma) recommends a custom `prisma` role with `bypassrls` for clearer monitoring. Optional for this API — connecting as `postgres` (or `postgres.<ref>` on the pooler) is enough. If you create a custom role, use that username in both migrate and runtime URLs.
 
-## 5. Point the app at Supabase
+## 5. GitHub integration (migrations)
+
+Connect this repo in the Supabase Dashboard so merges to your production branch apply `supabase/migrations/` automatically — no `DATABASE_URL` in GitHub Actions.
+
+Official guide: [GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration).
+
+### Layout
+
+| Path                                          | Role                                                   |
+| --------------------------------------------- | ------------------------------------------------------ |
+| `prisma/schema.prisma` + `prisma/migrations/` | Source of truth for schema changes                     |
+| `supabase/config.toml`                        | Supabase CLI / Branching config                        |
+| `supabase/migrations/*.sql`                   | Mirror of Prisma SQL (generated by `db:sync:supabase`) |
+
+Working directory for the integration: **`.`** (repository root — `supabase/` lives at the root).
+
+### Enable in the Dashboard
+
+1. Project **Settings → Integrations → GitHub Integration** → authorize and pick this repository.
+2. **Working directory**: `.`
+3. Enable **Deploy to production** (applies new migrations on push/merge to the production branch).
+4. Optional: enable **Automatic branching** so each PR gets a preview database (uses the same `supabase/migrations/` + `seed` settings).
+
+### Existing database already migrated with Prisma
+
+If production already has the schema from `bun run db:migrate:deploy`, mark the mirrored versions as applied **before** turning on Deploy to production (otherwise Supabase will try to re-run `CREATE TABLE` and fail):
+
+```bash
+bunx supabase login
+bunx supabase link --project-ref YOUR_PROJECT_REF
+bunx supabase migration repair --status applied \
+  20260806120000 \
+  20260809120000 \
+  20260809140000 \
+  20260809180000
+```
+
+After that, only **new** mirrored files (created via `db:migrate` → sync) are applied on merge.
+
+### Authoring a schema change
+
+1. Edit `prisma/schema.prisma`.
+2. `bun run db:migrate` (writes Prisma migration **and** refreshes `supabase/migrations/`).
+3. Commit both `prisma/migrations/` and `supabase/migrations/`.
+4. Merge to the production branch — Supabase applies the new SQL.
+
+## 6. Point the app at Supabase
 
 ### Local development
 
@@ -215,13 +265,13 @@ curl "http://localhost:3000/health"
 ### Vercel / production
 
 1. Set `DATABASE_URL` in Vercel to the **transaction pooler** URI (`:6543`, `schema=public`, `pgbouncer=true`).
-2. Keep Direct / Session URLs only on your machine (or as `DATABASE_URL_DIRECT` in CI) for `db:migrate:deploy`.
+2. Prefer Supabase GitHub for schema deploys; keep Direct / Session URLs only on your machine if you still run `db:migrate:deploy` locally.
 3. Follow [vercel.md](vercel.md) for the rest of the env vars (`AUTH_*`, optional `OPENAI_API_KEY`, …).
 4. Pin Vercel `regions` near the Supabase project region when possible.
 
 On serverless, start with a low Prisma `connection_limit` if you hit pooler client limits (Supabase troubleshooting often suggests `connection_limit=1` as a starting point for serverless). Append as a query param if needed: `&connection_limit=1`.
 
-## 6. Verify end-to-end
+## 7. Verify end-to-end
 
 ```bash
 # Health
@@ -243,18 +293,18 @@ SELECT COUNT(*) FROM "User";
 SELECT extname, extversion FROM pg_extension WHERE extname = 'vector';
 ```
 
-## 7. Security & dashboard extras
+## 8. Security & dashboard extras
 
 Useful, not required by the API:
 
-| Feature | Use |
-| --- | --- |
-| **Table Editor** | Inspect synced data |
-| **SQL Editor** | Ad-hoc checks |
-| **Observability → Database** | Connection counts, CPU, I/O |
-| **Database → Settings** | Pool size, password reset |
-| **API Settings** | Disable Data API if you only use Prisma |
-| **Auth / Storage / Edge Functions** | Not used by this API today |
+| Feature                             | Use                                     |
+| ----------------------------------- | --------------------------------------- |
+| **Table Editor**                    | Inspect synced data                     |
+| **SQL Editor**                      | Ad-hoc checks                           |
+| **Observability → Database**        | Connection counts, CPU, I/O             |
+| **Database → Settings**             | Pool size, password reset               |
+| **API Settings**                    | Disable Data API if you only use Prisma |
+| **Auth / Storage / Edge Functions** | Not used by this API today              |
 
 ### If the Data API stays enabled
 
@@ -272,8 +322,8 @@ Do not put the database password or a `service_role` / secret API key in fronten
 
 - [ ] Supabase project created; DB password saved
 - [ ] `vector` (pgvector) extension enabled
-- [ ] Migrate URL works (Direct or Session pooler — not transaction `:6543`)
-- [ ] `bun run db:migrate:deploy` completed successfully
+- [ ] Schema applied once: GitHub **Deploy to production**, _or_ `bun run db:migrate:deploy` (Direct/Session — not `:6543`)
+- [ ] If the DB was already Prisma-migrated: `supabase migration repair --status applied` for existing versions before enabling Deploy
 - [ ] App / Vercel uses transaction pooler `DATABASE_URL` with `schema=public&pgbouncer=true`
 - [ ] `/health` works against that database
 - [ ] Test sync writes rows visible in Table Editor
@@ -281,16 +331,17 @@ Do not put the database password or a `service_role` / secret API key in fronten
 
 ## Troubleshooting
 
-| Symptom | Fix |
-| --- | --- |
-| `P1001: Can't reach database server` | Wrong host/port; IPv6 vs IPv4 — try Session pooler for migrations; check project paused (free tier); verify URI from **Connect** |
-| `P1000` / authentication failed | Wrong password; URL-encode special characters; pooler username is often `postgres.<project-ref>` |
-| `extension "vector" is not available` | Enable **vector** under Database → Extensions, re-run migrate |
-| Migrations OK, Vercel fails to connect | Runtime must use **transaction** pooler `:6543` + `pgbouncer=true` + `schema=public` |
-| `prepared statement` / PgBouncer / Supavisor errors | Add `pgbouncer=true` on the transaction URL; never run migrations on `:6543` transaction mode |
-| `Timed out fetching a new connection from the connection pool` | Lower Prisma `connection_limit`; raise pool size in Database settings; check Observability for overload |
-| `Max client connections reached` | Use transaction mode for serverless; reduce `connection_limit`; upgrade compute / pool size |
-| Project paused | Resume in dashboard, then retry |
+| Symptom                                                        | Fix                                                                                                                              |
+| -------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `P1001: Can't reach database server`                           | Wrong host/port; IPv6 vs IPv4 — try Session pooler for migrations; check project paused (free tier); verify URI from **Connect** |
+| `P1000` / authentication failed                                | Wrong password; URL-encode special characters; pooler username is often `postgres.<project-ref>`                                 |
+| `extension "vector" is not available`                          | Enable **vector** under Database → Extensions, re-run migrate                                                                    |
+| Migrations OK, Vercel fails to connect                         | Runtime must use **transaction** pooler `:6543` + `pgbouncer=true` + `schema=public`                                             |
+| `prepared statement` / PgBouncer / Supavisor errors            | Add `pgbouncer=true` on the transaction URL; never run migrations on `:6543` transaction mode                                    |
+| GitHub deploy fails with “already exists”                      | Schema was applied via Prisma — `migration repair --status applied` for those versions                                           |
+| `Timed out fetching a new connection from the connection pool` | Lower Prisma `connection_limit`; raise pool size in Database settings; check Observability for overload                          |
+| `Max client connections reached`                               | Use transaction mode for serverless; reduce `connection_limit`; upgrade compute / pool size                                      |
+| Project paused                                                 | Resume in dashboard, then retry                                                                                                  |
 
 More Prisma-specific fixes: [Supabase Prisma troubleshooting](https://supabase.com/docs/guides/database/prisma/prisma-troubleshooting).
 
@@ -302,4 +353,5 @@ More Prisma-specific fixes: [Supabase Prisma troubleshooting](https://supabase.c
 - [architecture.md](architecture.md) — how Prisma is wired
 - [Supabase: Connect to Postgres](https://supabase.com/docs/guides/database/connecting-to-postgres)
 - [Supabase: Prisma](https://supabase.com/docs/guides/database/prisma)
+- [Supabase: GitHub integration](https://supabase.com/docs/guides/deployment/branching/github-integration)
 - [Supabase: pgvector](https://supabase.com/docs/guides/database/extensions/pgvector)

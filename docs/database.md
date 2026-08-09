@@ -59,10 +59,13 @@ erDiagram
 
 ## Migrations
 
+Prisma is the **authoring** source (`prisma/schema.prisma` + `prisma/migrations/`). The same SQL is mirrored into `supabase/migrations/` for [Supabase GitHub integration](supabase.md#github-integration-migrations) (production apply without GitHub Actions DB secrets).
+
 ```bash
-bun run db:migrate          # dev
-bun run db:migrate:deploy   # prod / CI
+bun run db:migrate          # Prisma migrate dev + sync supabase/migrations
+bun run db:sync:supabase    # regenerate supabase/migrations from Prisma only
+bun run db:migrate:deploy   # Prisma apply (local / optional; prefer Supabase GitHub for hosted prod)
 bun run db:studio           # GUI
 ```
 
-Initial migration lives in `prisma/migrations/`.
+Do not run Prisma `migrate deploy` and Supabase production deploy for the **same** new migration on one database.

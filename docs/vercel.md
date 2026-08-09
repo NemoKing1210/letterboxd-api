@@ -16,13 +16,13 @@ Browser / ChatGPT / Bruno
 
 ## What you need
 
-| Item | Why |
-| --- | --- |
+| Item                                           | Why                                             |
+| ---------------------------------------------- | ----------------------------------------------- |
 | GitHub/GitLab/Bitbucket repo with this project | Vercel deploys from Git (and/or GitHub Actions) |
-| [Vercel](https://vercel.com/) account | Hosting |
-| Working `DATABASE_URL` (pooler) | Prisma cannot start without Postgres |
-| Migrations already applied on that DB | Empty DB → runtime errors |
-| (Recommended) auth secrets | Do not leave production open |
+| [Vercel](https://vercel.com/) account          | Hosting                                         |
+| Working `DATABASE_URL` (pooler)                | Prisma cannot start without Postgres            |
+| Migrations already applied on that DB          | Empty DB → runtime errors                       |
+| (Recommended) auth secrets                     | Do not leave production open                    |
 
 Entrypoint already configured:
 
@@ -54,14 +54,16 @@ bun run deploy
 
 ### GitHub Actions (optional)
 
+Prefer **Supabase GitHub integration** to apply `supabase/migrations/` on merge (no production DB URL in Actions) — see [supabase.md](supabase.md#github-integration-migrations). Use Actions below only if you want Prisma `migrate deploy` from CI.
+
 On push to `main`, CI can migrate + deploy when these repository secrets exist:
 
-| Secret | Value |
-| --- | --- |
-| `VERCEL_TOKEN` | [Vercel token](https://vercel.com/account/tokens) |
-| `VERCEL_ORG_ID` | From `.vercel/project.json` after `vercel link` |
-| `VERCEL_PROJECT_ID` | Same file |
-| `DATABASE_URL_DIRECT` | Supabase **Direct** or **Session pooler** URL (migrations only — not transaction `:6543`) |
+| Secret                | Value                                                                                                                                      |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| `VERCEL_TOKEN`        | [Vercel token](https://vercel.com/account/tokens)                                                                                          |
+| `VERCEL_ORG_ID`       | From `.vercel/project.json` after `vercel link`                                                                                            |
+| `VERCEL_PROJECT_ID`   | Same file                                                                                                                                  |
+| `DATABASE_URL_DIRECT` | Supabase **Direct** or **Session pooler** URL (migrations only — not transaction `:6543`). Skip if you use Supabase GitHub for migrations. |
 
 Without those secrets, the migrate/deploy jobs no-op so forks stay green.
 
@@ -70,7 +72,10 @@ You can still use Vercel’s native Git integration instead of (or in addition t
 ## 1. Prepare the database
 
 1. Create a Postgres project ([Supabase](supabase.md) or other).
-2. Apply migrations from your machine (or CI with `DATABASE_URL_DIRECT`):
+2. Apply migrations once — pick **one** path:
+
+   - **Supabase GitHub** (recommended for open-source hosts): connect the repo and enable **Deploy to production** ([details](supabase.md#github-integration-migrations)), **or**
+   - **Manual Prisma** from your machine:
 
 ```bash
 # Use Direct or Session pooler for migrations — NOT transaction :6543
@@ -115,22 +120,22 @@ bun run vercel:env
 
 ### Required
 
-| Name | Example / notes |
-| --- | --- |
+| Name           | Example / notes                                                                                                                                                                                               |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `DATABASE_URL` | Supabase **transaction pooler** (Supavisor port **6543**) for serverless — see [supabase.md](supabase.md#connection-strings). Include `?schema=public&pgbouncer=true` so Prisma disables prepared statements. |
-| `NODE_ENV` | `production` |
+| `NODE_ENV`     | `production`                                                                                                                                                                                                  |
 
 You can use discrete `DB_*` instead of `DATABASE_URL`, but a single URL is simpler on Vercel.
 
 ### Strongly recommended for production
 
-| Name | Example / notes |
-| --- | --- |
-| `AUTH_ENABLED` | `true` |
-| `AUTH_METHODS` | `api_key` (or `api_key,bearer`) |
-| `AUTH_TOKENS` | Long random secret(s), CSV if rotating |
-| `AUTH_PUBLIC_PATHS` | `/health,/privacy,/openapi-gpt-actions.yaml` |
-| `CORS_ORIGIN` | Your front-end origin(s), or `*` only if you accept open CORS |
+| Name                | Example / notes                                               |
+| ------------------- | ------------------------------------------------------------- |
+| `AUTH_ENABLED`      | `true`                                                        |
+| `AUTH_METHODS`      | `api_key` (or `api_key,bearer`)                               |
+| `AUTH_TOKENS`       | Long random secret(s), CSV if rotating                        |
+| `AUTH_PUBLIC_PATHS` | `/health,/privacy,/openapi-gpt-actions.yaml`                  |
+| `CORS_ORIGIN`       | Your front-end origin(s), or `*` only if you accept open CORS |
 
 Generate a token (example):
 
@@ -140,22 +145,22 @@ openssl rand -hex 32
 
 ### Optional (features)
 
-| Name | When |
-| --- | --- |
-| `OPENAI_API_KEY` | Personalized AI recommendations |
+| Name                                          | When                                                                     |
+| --------------------------------------------- | ------------------------------------------------------------------------ |
+| `OPENAI_API_KEY`                              | Personalized AI recommendations                                          |
 | `OPENAI_*` / `RECOMMENDATION_ENGINE` / `AI_*` | Tune models and embedding budget — see [`.env.example`](../.env.example) |
-| `LETTERBOXD_*` | Timeouts, page delay, enrichment concurrency |
-| `CACHE_TTL` | In-memory cache TTL (seconds); default is fine |
-| `USER_SYNC_TTL_SECONDS` | Auto re-sync freshness (default `43200`) |
-| `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX` | Per-IP limits |
-| `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY` | Only if outbound Letterboxd traffic must go through a proxy |
-| `LOG_LEVEL` | e.g. `info` |
+| `LETTERBOXD_*`                                | Timeouts, page delay, enrichment concurrency                             |
+| `CACHE_TTL`                                   | In-memory cache TTL (seconds); default is fine                           |
+| `USER_SYNC_TTL_SECONDS`                       | Auto re-sync freshness (default `43200`)                                 |
+| `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX`     | Per-IP limits                                                            |
+| `HTTPS_PROXY` / `HTTP_PROXY` / `NO_PROXY`     | Only if outbound Letterboxd traffic must go through a proxy              |
+| `LOG_LEVEL`                                   | e.g. `info`                                                              |
 
 ### Not required on Vercel
 
-| Name | Why |
-| --- | --- |
-| `PORT` | Vercel assigns the port |
+| Name                            | Why                                             |
+| ------------------------------- | ----------------------------------------------- |
+| `PORT`                          | Vercel assigns the port                         |
 | `SUPABASE_URL` / `SUPABASE_KEY` | Reserved; Prisma uses `DATABASE_URL` only today |
 
 After saving variables, trigger a **Redeploy** so the new env is applied.
@@ -223,16 +228,16 @@ Use:
 
 ## Troubleshooting
 
-| Symptom | What to check |
-| --- | --- |
-| `500` / Prisma “Can’t reach database” | `DATABASE_URL` must be transaction pooler for Vercel; password URL-encoding; IPv4 vs IPv6 (see [supabase.md](supabase.md)); project paused / network restrictions |
-| Deploy OK but empty schema errors | Run `bun run db:migrate:deploy` against that DB (direct URL) |
-| `401 UNAUTHORIZED` | `AUTH_ENABLED`, `AUTH_TOKENS`, request header `X-API-Key` |
-| Sync / enrichment timeout | Function `maxDuration` / plan limits; reduce enrichment concurrency; sync a smaller user first |
-| Deploy fails on `maxDuration` | Hobby plan — set `maxDuration` to `10` in `vercel.json` |
-| `/docs` or GPT schema 404 | Confirm `vercel.json` rewrites and that `docs/chatgpt-actions.yaml` is included (`includeFiles`) |
-| Cold starts feel slow | Normal for serverless + Prisma; pin `regions`; warm with `/health` after deploy |
-| `vercel build` / Prisma client missing | `buildCommand` runs `bun run db:generate`; `postinstall` also generates the client |
+| Symptom                                | What to check                                                                                                                                                     |
+| -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `500` / Prisma “Can’t reach database”  | `DATABASE_URL` must be transaction pooler for Vercel; password URL-encoding; IPv4 vs IPv6 (see [supabase.md](supabase.md)); project paused / network restrictions |
+| Deploy OK but empty schema errors      | Run `bun run db:migrate:deploy` against that DB (direct URL)                                                                                                      |
+| `401 UNAUTHORIZED`                     | `AUTH_ENABLED`, `AUTH_TOKENS`, request header `X-API-Key`                                                                                                         |
+| Sync / enrichment timeout              | Function `maxDuration` / plan limits; reduce enrichment concurrency; sync a smaller user first                                                                    |
+| Deploy fails on `maxDuration`          | Hobby plan — set `maxDuration` to `10` in `vercel.json`                                                                                                           |
+| `/docs` or GPT schema 404              | Confirm `vercel.json` rewrites and that `docs/chatgpt-actions.yaml` is included (`includeFiles`)                                                                  |
+| Cold starts feel slow                  | Normal for serverless + Prisma; pin `regions`; warm with `/health` after deploy                                                                                   |
+| `vercel build` / Prisma client missing | `buildCommand` runs `bun run db:generate`; `postinstall` also generates the client                                                                                |
 
 ## Related docs
 

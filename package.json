@@ -1,6 +1,6 @@
 {
   "name": "letterboxd-api",
-  "version": "3.3.3",
+  "version": "3.4.0",
   "description": "Production-ready Letterboxd API — analyze, filter, and understand film taste",
   "type": "module",
   "main": "dist/index.js",
@@ -17,8 +17,9 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "db:generate": "prisma generate",
-    "db:migrate": "bun run scripts/run-prisma.ts migrate dev",
+    "db:migrate": "bun run scripts/run-prisma.ts migrate dev && bun run db:sync:supabase",
     "db:migrate:deploy": "bun run scripts/run-prisma.ts migrate deploy",
+    "db:sync:supabase": "bun run scripts/sync-supabase-migrations.ts",
     "db:studio": "bun run scripts/run-prisma.ts studio",
     "db:push": "bun run scripts/run-prisma.ts db push",
     "postinstall": "prisma generate",
