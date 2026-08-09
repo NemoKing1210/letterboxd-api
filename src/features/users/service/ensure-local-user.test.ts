@@ -48,6 +48,7 @@ describe('ensureLocalUser', () => {
       findByUsername: vi.fn(async () => existing),
       findByUsernameWithMovies: vi.fn(),
       upsertByUsername: vi.fn(),
+      findFiltered: vi.fn(),
     };
     const syncService = { syncLetterboxdUser: vi.fn() };
     const finishedAt = new Date('2024-01-01T12:00:00.000Z');
@@ -74,6 +75,7 @@ describe('ensureLocalUser', () => {
       findByUsername,
       findByUsernameWithMovies: vi.fn(),
       upsertByUsername: vi.fn(),
+      findFiltered: vi.fn(),
     };
     const syncService = { syncLetterboxdUser: vi.fn(async () => ({})) };
 
@@ -95,6 +97,7 @@ describe('ensureLocalUser', () => {
       findByUsername,
       findByUsernameWithMovies: vi.fn(),
       upsertByUsername: vi.fn(),
+      findFiltered: vi.fn(),
     };
     const syncService = { syncLetterboxdUser: vi.fn(async () => ({})) };
     const finishedAt = new Date('2024-01-01T00:00:00.000Z');
@@ -117,6 +120,7 @@ describe('ensureLocalUser', () => {
       findByUsername: vi.fn(async () => existing),
       findByUsernameWithMovies: vi.fn(),
       upsertByUsername: vi.fn(),
+      findFiltered: vi.fn(),
     };
     const syncService = { syncLetterboxdUser: vi.fn(async () => ({})) };
 
@@ -136,6 +140,7 @@ describe('ensureLocalUser', () => {
       findByUsername: vi.fn(async () => existing),
       findByUsernameWithMovies: vi.fn(),
       upsertByUsername: vi.fn(),
+      findFiltered: vi.fn(),
     };
     const syncService = {
       syncLetterboxdUser: vi.fn(async () => {
@@ -164,6 +169,7 @@ describe('ensureLocalUser', () => {
       findByUsername: vi.fn(async () => existing),
       findByUsernameWithMovies: vi.fn(),
       upsertByUsername: vi.fn(),
+      findFiltered: vi.fn(),
     };
     const syncService = { syncLetterboxdUser: vi.fn() };
 
@@ -182,6 +188,7 @@ describe('ensureLocalUser', () => {
       findByUsername: vi.fn(async () => null),
       findByUsernameWithMovies: vi.fn(),
       upsertByUsername: vi.fn(),
+      findFiltered: vi.fn(),
     };
     const syncService = { syncLetterboxdUser: vi.fn() };
 
@@ -202,6 +209,7 @@ describe('ensureLocalUser', () => {
       findByUsername: vi.fn(async () => null),
       findByUsernameWithMovies: vi.fn(),
       upsertByUsername: vi.fn(),
+      findFiltered: vi.fn(),
     };
     const syncService = { syncLetterboxdUser: vi.fn(async () => ({})) };
 

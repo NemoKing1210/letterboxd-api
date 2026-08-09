@@ -58,6 +58,11 @@ export function filmPageUrl(slug: string, baseUrl: string): string {
   return `${baseUrl.replace(/\/$/, '')}/film/${slug}/`;
 }
 
+/** Letterboxd user profile page URL. */
+export function userProfileUrl(username: string, baseUrl: string): string {
+  return `${baseUrl.replace(/\/$/, '')}/${username.toLowerCase()}/`;
+}
+
 export type BackoffOptions = {
   baseMs?: number;
   maxMs?: number;

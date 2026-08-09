@@ -61,6 +61,7 @@ function createService(entries: Array<UserMovie & { movie: Movie }>) {
     findByUsername: vi.fn(async () => existing),
     findByUsernameWithMovies: vi.fn(),
     upsertByUsername: vi.fn(),
+    findFiltered: vi.fn(),
   };
   const userMovies: UserMovieRepository = {
     upsert: vi.fn(),
@@ -75,6 +76,7 @@ function createService(entries: Array<UserMovie & { movie: Movie }>) {
     }),
     findBySearch: vi.fn(),
     findAllForUser: vi.fn(async () => entries),
+    findAllForUsers: vi.fn(async () => entries),
   };
   const latestSuccess: SyncHistory = {
     id: 's1',

@@ -1,0 +1,51 @@
+meta {
+  name: List Users
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/api/users?sort=username_asc&page=1&limit=20
+}
+
+params:query {
+  ~followersMin: 0
+  ~followersMax: 1000
+  ~followingMin: 0
+  ~followingMax: 1000
+  ~moviesMin: 1
+  ~moviesMax: 5000
+  ~q: demo
+  ~search: demo
+  sort: username_asc
+  page: 1
+  limit: 20
+}
+
+docs {
+  Paginated list of locally synced users (does not trigger Letterboxd sync).
+  Each item uses the same profile shape as Get User Profile.
+
+  | Param | Notes |
+  | --- | --- |
+  | `followersMin` / `followersMax` | Followers count range |
+  | `followingMin` / `followingMax` | Following count range |
+  | `moviesMin` / `moviesMax` | Diary size range |
+  | `q` / `search` | Case-insensitive username contains (aliases; must match if both set) |
+  | `sort` | `username_asc`, `username_desc`, `created_desc`, `created_asc`, `updated_desc`, `updated_asc`, `followers_desc`, `followers_asc`, `following_desc`, `following_asc`, `movies_desc`, `movies_asc` |
+  | `page` / `limit` | Pagination (`limit` default 20, max 100) |
+
+  Disabled query params (prefixed with `~` in the file) can be enabled in Bruno UI.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("response is paginated", function() {
+    expect(res.body).to.have.property("items");
+    expect(res.body).to.have.property("page");
+    expect(res.body).to.have.property("total");
+  });
+}

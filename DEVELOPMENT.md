@@ -159,7 +159,7 @@ Husky runs lint-staged on pre-commit. Full conventions: [CONTRIBUTING.md](CONTRI
 
 ## Bruno
 
-Open the [`bruno/`](bruno/) folder in [Bruno](https://www.usebruno.com/). Folders mirror API nesting (`Users → Favorites → Directors`, etc.). Select the **Local** environment, set `username`, then run **Users → Sync → Sync User** (or **Users → Get User Profile** for lazy sync) before hitting derived endpoints.
+Open the [`bruno/`](bruno/) folder in [Bruno](https://www.usebruno.com/). Folders mirror API nesting (`Users → Favorites → Directors`, etc.). Select the **Local** environment, set `username`, then run **Users → Sync → Sync User** (or **Users → Get User Profile** for lazy sync) before hitting derived endpoints. Use **Users → List Users** to browse already-synced accounts.
 
 **Users → Recommendations → Get Recommendations** uses OpenAI when the API process has `OPENAI_API_KEY` and Postgres has pgvector (`bun run db:migrate`). Without a key it returns the rule-based fallback — no Bruno env vars are required for OpenAI (keys stay in server `.env`).
 

@@ -43,6 +43,59 @@ Setup guide: [chatgpt-actions.md](chatgpt-actions.md). Repo copy of the schema: 
 
 All user-scoped `GET` endpoints below auto-sync from Letterboxd when the username is not in the local database yet, or when the last successful sync is older than `USER_SYNC_TTL_SECONDS` (default 12 hours; `0` disables stale refresh only). The first request / refresh may take longer (full scrape). If a stale refresh fails, the API serves existing local data. Use `POST .../sync` to force a refresh.
 
+### Synced users
+
+`GET /api/users`
+
+Lists users already stored locally (after at least one sync). Does **not** trigger Letterboxd sync.
+
+Query params:
+
+| Param | Description |
+| --- | --- |
+| `followersMin` / `followersMax` | Followers count range |
+| `followingMin` / `followingMax` | Following count range |
+| `moviesMin` / `moviesMax` | Diary size (synced movies) range |
+| `q` / `search` | Case-insensitive username contains (aliases; must be identical if both are set) |
+| `sort` | `username_asc`, `username_desc`, `created_desc`, `created_asc`, `updated_desc`, `updated_asc`, `followers_desc`, `followers_asc`, `following_desc`, `following_asc`, `movies_desc`, `movies_asc` |
+| `page` / `limit` | Pagination (`limit` default **20**, max **100**) |
+
+```json
+{
+  "items": [
+    {
+      "username": "example",
+      "url": "https://letterboxd.com/example/",
+      "moviesCount": 500,
+      "averageRating": 4.2,
+      "favoriteGenres": [{ "name": "sci-fi", "count": 42 }],
+      "lastSyncedAt": "2026-08-06T12:00:00.000Z",
+      "followingCount": 1,
+      "followersCount": 2,
+      "externalLinks": [
+        { "label": "linktr.ee", "url": "https://linktr.ee/example" }
+      ],
+      "favoriteFilms": [
+        {
+          "slug": "inception",
+          "title": "Inception",
+          "year": 2010,
+          "poster": "https://...",
+          "url": "https://letterboxd.com/film/inception/"
+        }
+      ],
+      "recentLikes": []
+    }
+  ],
+  "page": 1,
+  "limit": 20,
+  "total": 1,
+  "totalPages": 1
+}
+```
+
+Each `items[]` entry uses the same shape as `GET /api/users/:username`.
+
 ### User profile
 
 `GET /api/users/:username`
@@ -50,6 +103,7 @@ All user-scoped `GET` endpoints below auto-sync from Letterboxd when the usernam
 ```json
 {
   "username": "example",
+  "url": "https://letterboxd.com/example/",
   "moviesCount": 500,
   "averageRating": 4.2,
   "favoriteGenres": [{ "name": "sci-fi", "count": 42 }],

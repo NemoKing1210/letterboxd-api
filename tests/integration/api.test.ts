@@ -85,8 +85,30 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
       })),
     } as unknown as AppContainer['syncService'],
     usersService: {
+      listUsers: vi.fn(async () => ({
+        items: [
+          {
+            username: 'demo',
+            url: 'https://letterboxd.com/demo/',
+            moviesCount: 3,
+            averageRating: 4.2,
+            favoriteGenres: [{ name: 'sci-fi', count: 2 }],
+            lastSyncedAt: null,
+            followingCount: 1,
+            followersCount: 2,
+            externalLinks: [],
+            favoriteFilms: [],
+            recentLikes: [],
+          },
+        ],
+        page: 1,
+        limit: 20,
+        total: 1,
+        totalPages: 1,
+      })),
       getProfile: vi.fn(async () => ({
         username: 'demo',
+        url: 'https://letterboxd.com/demo/',
         moviesCount: 3,
         averageRating: 4.2,
         favoriteGenres: [{ name: 'sci-fi', count: 2 }],
@@ -179,6 +201,22 @@ describe('API integration', () => {
     const body = (await res.json()) as { username: string; moviesCount: number };
     expect(body.username).toBe('demo');
     expect(body.moviesCount).toBe(3);
+  });
+
+  it('lists synced users', async () => {
+    const container = createTestContainer();
+    const app = createApp(container);
+    const res = await app.request('/api/users?sort=movies_desc&page=1&limit=20');
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as {
+      items: Array<{ username: string }>;
+      total: number;
+      page: number;
+    };
+    expect(body.items[0]?.username).toBe('demo');
+    expect(body.total).toBe(1);
+    expect(body.page).toBe(1);
+    expect(container.usersService.listUsers).toHaveBeenCalled();
   });
 
   it('returns openapi document', async () => {

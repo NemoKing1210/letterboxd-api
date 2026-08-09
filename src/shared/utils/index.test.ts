@@ -10,6 +10,7 @@ import {
   mapWithConcurrency,
   normalizeUsername,
   topN,
+  userProfileUrl,
   withRetry,
 } from './index';
 import { ExternalServiceError, NotFoundError } from '../errors/app-error';
@@ -55,6 +56,12 @@ describe('shared utils', () => {
   it('builds film page urls', () => {
     expect(filmPageUrl('arrival', 'https://letterboxd.com')).toBe(
       'https://letterboxd.com/film/arrival/',
+    );
+  });
+
+  it('builds user profile urls', () => {
+    expect(userProfileUrl('Demo', 'https://letterboxd.com')).toBe(
+      'https://letterboxd.com/demo/',
     );
   });
 

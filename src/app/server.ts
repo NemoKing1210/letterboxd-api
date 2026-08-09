@@ -22,7 +22,7 @@ import {
 } from '../features/favorites/schemas/favorites-schemas';
 import { movieDtoSchema } from '../features/movies/schemas/movie-schemas';
 import { searchBodyOpenApiSchema, searchBodySchema } from '../features/search/schemas/search-schemas';
-import { movieQuerySchema, usernameParamSchema, userProfileSchema } from '../features/users/schemas/user-schemas';
+import { movieQuerySchema, usernameParamSchema, userProfileSchema, userQuerySchema } from '../features/users/schemas/user-schemas';
 import { syncResponseSchema } from '../features/synchronization/schemas/sync-schemas';
 import { AppError, ValidationError } from '../shared/errors/app-error';
 
@@ -41,6 +41,14 @@ const ErrorSchema = z.object({
 
 const PaginatedMoviesSchema = z.object({
   items: z.array(movieDtoSchema),
+  page: z.number(),
+  limit: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
+});
+
+const PaginatedUsersSchema = z.object({
+  items: z.array(userProfileSchema),
   page: z.number(),
   limit: z.number(),
   total: z.number(),
@@ -177,6 +185,28 @@ export function createApp(container: AppContainer) {
       'Content-Type': 'text/yaml; charset=utf-8',
       'Cache-Control': 'public, max-age=300',
     });
+  });
+
+  const listUsersRoute = createRoute({
+    method: 'get',
+    path: '/api/users',
+    tags: ['Users'],
+    summary: 'List synced users with filters',
+    request: {
+      query: userQuerySchema,
+    },
+    responses: {
+      200: {
+        description: 'Paginated synced users',
+        content: { 'application/json': { schema: PaginatedUsersSchema } },
+      },
+    },
+  });
+
+  app.openapi(listUsersRoute, async (c) => {
+    const query = c.req.valid('query');
+    const result = await container.usersService.listUsers(query);
+    return c.json(result, 200);
   });
 
   const getUserRoute = createRoute({
@@ -473,7 +503,7 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '3.2.5',
+      version: '3.3.2',
       description:
         'Analyze Letterboxd film taste: sync, filter, search, statistics, and AI recommendations (embeddings + optional LLM).',
     },

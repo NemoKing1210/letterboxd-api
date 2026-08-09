@@ -145,6 +145,7 @@ describe('SynchronizationService', () => {
         findByUsername: vi.fn(),
         findByUsernameWithMovies: vi.fn(),
         upsertByUsername,
+        findFiltered: vi.fn(),
       },
       movies: {
         findBySlugs: vi.fn(),
@@ -155,6 +156,7 @@ describe('SynchronizationService', () => {
         findFiltered: vi.fn(),
         findBySearch: vi.fn(),
         findAllForUser: vi.fn(),
+        findAllForUsers: vi.fn(),
       },
       syncHistory: {
         create: vi.fn(async () => syncRecord),
@@ -242,6 +244,7 @@ describe('SynchronizationService', () => {
         findByUsername: vi.fn(),
         findByUsernameWithMovies: vi.fn(),
         upsertByUsername: vi.fn(async () => user),
+        findFiltered: vi.fn(),
       },
       movies: {
         findBySlugs: vi.fn(),
@@ -252,6 +255,7 @@ describe('SynchronizationService', () => {
         findFiltered: vi.fn(),
         findBySearch: vi.fn(),
         findAllForUser: vi.fn(),
+        findAllForUsers: vi.fn(),
       },
       syncHistory: {
         create,

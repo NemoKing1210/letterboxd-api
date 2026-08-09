@@ -388,6 +388,9 @@ components:
       properties:
         username:
           type: string
+        url:
+          type: string
+          description: Letterboxd profile URL
         moviesCount:
           type: integer
         averageRating:

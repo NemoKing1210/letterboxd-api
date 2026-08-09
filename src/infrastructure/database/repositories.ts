@@ -48,10 +48,45 @@ export type UserProfileSnapshot = {
   recentLikes: Array<{ slug: string; title: string; year: number | null; poster: string | null }>;
 };
 
+export type UserListSort =
+  | 'username_asc'
+  | 'username_desc'
+  | 'created_desc'
+  | 'created_asc'
+  | 'updated_desc'
+  | 'updated_asc'
+  | 'followers_desc'
+  | 'followers_asc'
+  | 'following_desc'
+  | 'following_asc'
+  | 'movies_desc'
+  | 'movies_asc';
+
+export type UserListFilters = {
+  /** Case-insensitive contains on username. */
+  q?: string;
+  followersMin?: number;
+  followersMax?: number;
+  followingMin?: number;
+  followingMax?: number;
+  moviesMin?: number;
+  moviesMax?: number;
+  sort?: UserListSort;
+  page: number;
+  limit: number;
+};
+
+export type UserListRow = {
+  user: User;
+  moviesCount: number;
+  lastSyncedAt: Date | null;
+};
+
 export interface UserRepository {
   findByUsername(username: string): Promise<User | null>;
   findByUsernameWithMovies(username: string): Promise<UserWithMovies | null>;
   upsertByUsername(username: string, profile?: UserProfileSnapshot): Promise<User>;
+  findFiltered(filters: UserListFilters): Promise<{ items: UserListRow[]; total: number }>;
 }
 
 export interface MovieRepository {
@@ -81,6 +116,7 @@ export interface UserMovieRepository {
     query: MovieSearchQuery,
   ): Promise<{ items: Array<UserMovie & { movie: Movie }>; total: number }>;
   findAllForUser(userId: string): Promise<Array<UserMovie & { movie: Movie }>>;
+  findAllForUsers(userIds: string[]): Promise<Array<UserMovie & { movie: Movie }>>;
 }
 
 export interface SyncHistoryRepository {
@@ -124,6 +160,160 @@ export class PrismaUserRepository implements UserRepository {
       create: { username: normalized, ...profileData },
       update: profileData,
     });
+  }
+
+  async findFiltered(filters: UserListFilters): Promise<{ items: UserListRow[]; total: number }> {
+    const limit = clamp(filters.limit, 1, MAX_LIMIT);
+    const page = Math.max(1, filters.page);
+    const where = await this.buildUserListWhere(filters);
+    const orderBy = this.buildUserListOrderBy(filters.sort);
+
+    const [total, rows] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        orderBy,
+        skip: (page - 1) * limit,
+        take: limit,
+        include: {
+          _count: { select: { movies: true } },
+          syncs: {
+            orderBy: { startedAt: 'desc' },
+            take: 1,
+            select: { finishedAt: true, startedAt: true },
+          },
+        },
+      }),
+    ]);
+
+    return {
+      total,
+      items: rows.map((row) => {
+        const latest = row.syncs[0];
+        return {
+          user: {
+            id: row.id,
+            username: row.username,
+            followingCount: row.followingCount,
+            followersCount: row.followersCount,
+            externalLinks: row.externalLinks,
+            favoriteFilms: row.favoriteFilms,
+            recentLikes: row.recentLikes,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+          },
+          moviesCount: row._count.movies,
+          lastSyncedAt: latest?.finishedAt ?? latest?.startedAt ?? null,
+        };
+      }),
+    };
+  }
+
+  private async buildUserListWhere(filters: UserListFilters): Promise<Prisma.UserWhereInput> {
+    const and: Prisma.UserWhereInput[] = [];
+
+    if (filters.q) {
+      and.push({ username: { contains: filters.q.toLowerCase(), mode: 'insensitive' } });
+    }
+    if (filters.followersMin !== undefined || filters.followersMax !== undefined) {
+      and.push({
+        followersCount: {
+          ...(filters.followersMin !== undefined ? { gte: filters.followersMin } : {}),
+          ...(filters.followersMax !== undefined ? { lte: filters.followersMax } : {}),
+        },
+      });
+    }
+    if (filters.followingMin !== undefined || filters.followingMax !== undefined) {
+      and.push({
+        followingCount: {
+          ...(filters.followingMin !== undefined ? { gte: filters.followingMin } : {}),
+          ...(filters.followingMax !== undefined ? { lte: filters.followingMax } : {}),
+        },
+      });
+    }
+
+    const movieCountIds = await this.resolveUserIdsByMovieCount(
+      filters.moviesMin,
+      filters.moviesMax,
+    );
+    if (movieCountIds !== null) {
+      and.push({ id: { in: movieCountIds } });
+    }
+
+    return and.length > 0 ? { AND: and } : {};
+  }
+
+  /**
+   * Returns matching user ids when moviesMin/Max are set; `null` means no movie-count filter.
+   * Includes users with zero diary entries when the range allows 0.
+   */
+  private async resolveUserIdsByMovieCount(
+    moviesMin?: number,
+    moviesMax?: number,
+  ): Promise<string[] | null> {
+    if (moviesMin === undefined && moviesMax === undefined) {
+      return null;
+    }
+
+    const grouped = await this.prisma.userMovie.groupBy({
+      by: ['userId'],
+      _count: { _all: true },
+    });
+
+    const ids = new Set<string>();
+    for (const row of grouped) {
+      const count = row._count._all;
+      if (moviesMin !== undefined && count < moviesMin) continue;
+      if (moviesMax !== undefined && count > moviesMax) continue;
+      ids.add(row.userId);
+    }
+
+    const includesZero =
+      (moviesMin === undefined || moviesMin <= 0) &&
+      (moviesMax === undefined || moviesMax >= 0);
+    if (includesZero) {
+      const zeroMovieUsers = await this.prisma.user.findMany({
+        where: { movies: { none: {} } },
+        select: { id: true },
+      });
+      for (const user of zeroMovieUsers) {
+        ids.add(user.id);
+      }
+    }
+
+    return [...ids];
+  }
+
+  private buildUserListOrderBy(
+    sort?: UserListSort,
+  ): Prisma.UserOrderByWithRelationInput | Prisma.UserOrderByWithRelationInput[] {
+    switch (sort) {
+      case 'username_desc':
+        return { username: 'desc' };
+      case 'created_desc':
+        return [{ createdAt: 'desc' }, { username: 'asc' }];
+      case 'created_asc':
+        return [{ createdAt: 'asc' }, { username: 'asc' }];
+      case 'updated_desc':
+        return [{ updatedAt: 'desc' }, { username: 'asc' }];
+      case 'updated_asc':
+        return [{ updatedAt: 'asc' }, { username: 'asc' }];
+      case 'followers_desc':
+        return [{ followersCount: 'desc' }, { username: 'asc' }];
+      case 'followers_asc':
+        return [{ followersCount: 'asc' }, { username: 'asc' }];
+      case 'following_desc':
+        return [{ followingCount: 'desc' }, { username: 'asc' }];
+      case 'following_asc':
+        return [{ followingCount: 'asc' }, { username: 'asc' }];
+      case 'movies_desc':
+        return [{ movies: { _count: 'desc' } }, { username: 'asc' }];
+      case 'movies_asc':
+        return [{ movies: { _count: 'asc' } }, { username: 'asc' }];
+      case 'username_asc':
+      default:
+        return { username: 'asc' };
+    }
   }
 }
 
@@ -274,6 +464,16 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
   findAllForUser(userId: string): Promise<Array<UserMovie & { movie: Movie }>> {
     return this.prisma.userMovie.findMany({
       where: { userId },
+      include: { movie: true },
+    });
+  }
+
+  findAllForUsers(userIds: string[]): Promise<Array<UserMovie & { movie: Movie }>> {
+    if (userIds.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.prisma.userMovie.findMany({
+      where: { userId: { in: userIds } },
       include: { movie: true },
     });
   }
