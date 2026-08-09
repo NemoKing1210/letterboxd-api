@@ -1,0 +1,44 @@
+meta {
+  name: List Movies
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/movies?ratingMin=4&sort=rating_desc&page=1&limit=20
+}
+
+params:query {
+  ratingMin: 4
+  ~ratingMax: 5
+  ~year: 2020
+  ~yearFrom: 2000
+  ~yearTo: 2024
+  ~genre: sci-fi
+  ~director: Nolan
+  sort: rating_desc
+  page: 1
+  limit: 20
+}
+
+docs {
+  Filtered movie list.
+
+  | Param | Notes |
+  | --- | --- |
+  | `ratingMin` / `ratingMax` | 0–5 |
+  | `year` | Exact year |
+  | `yearFrom` / `yearTo` | Range |
+  | `genre` | Exact genre token |
+  | `director` | Case-insensitive contains |
+  | `sort` | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
+  | `page` / `limit` | Pagination (`limit` max 100) |
+
+  Disabled query params (prefixed with `~` in the file) can be enabled in Bruno UI.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

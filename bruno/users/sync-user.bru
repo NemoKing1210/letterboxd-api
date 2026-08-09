@@ -1,0 +1,21 @@
+meta {
+  name: Sync User
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{baseUrl}}/api/users/{{username}}/sync
+}
+
+docs {
+  Forces a Letterboxd scrape + upsert and returns sync metadata.
+
+  Prefer running this intentionally — avoid aggressive scraping.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

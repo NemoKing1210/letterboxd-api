@@ -1,0 +1,19 @@
+meta {
+  name: Get Statistics
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/statistics
+}
+
+docs {
+  Aggregated watch stats: movies watched, average rating, top genres / directors / decades.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

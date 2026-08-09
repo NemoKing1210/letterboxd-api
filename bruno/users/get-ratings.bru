@@ -1,0 +1,19 @@
+meta {
+  name: Get Ratings
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/ratings
+}
+
+docs {
+  Average rating, count, best/worst films, and rating distribution.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}

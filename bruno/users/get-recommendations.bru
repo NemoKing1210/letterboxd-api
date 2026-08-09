@@ -1,0 +1,27 @@
+meta {
+  name: Get Recommendations
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/recommendations?limit=5
+}
+
+params:query {
+  limit: 5
+}
+
+docs {
+  Rule-based recommendations stub (`limit` 1–20, default 5).
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("items is an array", function() {
+    expect(res.body.items).to.be.an("array");
+  });
+}

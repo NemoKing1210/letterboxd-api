@@ -1,0 +1,31 @@
+meta {
+  name: Letterboxd Intelligence API
+}
+
+headers {
+  accept: application/json
+}
+
+auth {
+  mode: none
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:3000
+  username: NemoKing
+}
+
+docs {
+  # Letterboxd Intelligence API
+  
+  Sync Letterboxd data, filter movies, and inspect ratings / favorites / statistics.
+  
+  ## Setup
+  
+  1. Start the API (`bun run dev`)
+  2. Select the **Local** environment
+  3. Set `username` to a Letterboxd username
+  4. Run **Sync User** once before reading derived endpoints (or hit Get Profile to lazy-sync)
+  
+  Interactive docs: `{{baseUrl}}/docs`
+}

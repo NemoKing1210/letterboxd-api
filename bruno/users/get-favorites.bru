@@ -1,0 +1,19 @@
+meta {
+  name: Get Favorites
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/favorites
+}
+
+docs {
+  Favorite movies (liked or ≥ 4.5), directors, genres, years.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+}
