@@ -123,10 +123,24 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
     } as unknown as AppContainer['usersService'],
     moviesService: {
       listMovies: vi.fn(async () => ({
-        items: [],
+        items: [
+          {
+            id: 'm1',
+            title: 'Arrival',
+            year: 2016,
+            slug: 'arrival',
+            url: 'https://letterboxd.com/film/arrival/',
+            poster: null,
+            genres: ['sci-fi'],
+            director: 'Denis Villeneuve',
+            rating: 4.5,
+            favorite: true,
+            watchedDate: null,
+          },
+        ],
         page: 1,
         limit: 20,
-        total: 0,
+        total: 1,
         totalPages: 1,
       })),
     } as unknown as AppContainer['moviesService'],
@@ -231,6 +245,48 @@ describe('API integration', () => {
     const body = (await res.json()) as { username: string; moviesCount: number };
     expect(body.username).toBe('demo');
     expect(body.moviesCount).toBe(3);
+  });
+
+  it('applies sparse fields on profile and movies list', async () => {
+    const container = createTestContainer();
+    const app = createApp(container);
+
+    const profileRes = await app.request('/api/users/demo?fields=username,moviesCount');
+    expect(profileRes.status).toBe(200);
+    expect(await profileRes.json()).toEqual({ username: 'demo', moviesCount: 3 });
+
+    const moviesRes = await app.request('/api/users/demo/movies?fields=title,year');
+    expect(moviesRes.status).toBe(200);
+    const moviesBody = (await moviesRes.json()) as {
+      items: Array<Record<string, unknown>>;
+      page: number;
+      total: number;
+    };
+    expect(moviesBody.page).toBe(1);
+    expect(moviesBody.total).toBe(1);
+    expect(moviesBody.items).toEqual([{ title: 'Arrival', year: 2016 }]);
+  });
+
+  it('rejects unknown fields with validation error', async () => {
+    const app = createApp(createTestContainer());
+    const res = await app.request('/api/users/demo/movies?fields=title,nope');
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { success: boolean; error: { issues: Array<{ message: string }> } };
+    expect(body.success).toBe(false);
+    expect(body.error.issues.some((issue) => issue.message.includes('Unknown field'))).toBe(true);
+  });
+
+  it('passes fields through to export service', async () => {
+    const container = createTestContainer();
+    const app = createApp(container);
+
+    const res = await app.request('/api/users/demo/movies/export/csv?fields=title,year');
+    expect(res.status).toBe(200);
+    expect(container.exportService.exportMovies).toHaveBeenCalledWith(
+      'demo',
+      expect.objectContaining({ fields: ['title', 'year'] }),
+      'csv',
+    );
   });
 
   it('lists synced users', async () => {

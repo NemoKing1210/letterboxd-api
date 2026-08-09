@@ -4,6 +4,25 @@ import {
   DEFAULT_RETRY_MAX_MS,
 } from '../constants';
 
+export {
+  MOVIE_DTO_FIELDS,
+  USER_PROFILE_FIELDS,
+  NAMED_COUNT_FIELDS,
+  RATINGS_FIELDS,
+  STATISTICS_FIELDS,
+  RECOMMENDATION_ITEM_FIELDS,
+  SYNC_RESPONSE_FIELDS,
+  FieldsValidationError,
+  parseFields,
+  pickFields,
+  mapItemsFields,
+  applyItemFields,
+  applyObjectFields,
+  fieldsQueryField,
+  fieldsOnlyQuerySchema,
+} from './fields';
+export type { MovieDtoField } from './fields';
+
 const TITLE_YEAR_RE = /\s*\((\d{4})\)\s*$/;
 const PLACEHOLDER_POSTER_RE = /empty-poster|static\/img\/empty/i;
 const MIN_FILM_YEAR = 1888;

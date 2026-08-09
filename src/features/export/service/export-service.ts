@@ -86,17 +86,18 @@ export class ExportService {
 
     const movies = items.map(toMovieDto);
     const filename = `${normalized}-${scope}.${format}`;
+    const fields = query.fields;
 
     if (format === 'csv') {
       return {
-        body: moviesToCsv(movies),
+        body: moviesToCsv(movies, fields),
         contentType: 'text/csv; charset=utf-8',
         filename,
       };
     }
 
     return {
-      body: moviesToJson(movies, total),
+      body: moviesToJson(movies, total, fields),
       contentType: 'application/json',
       filename,
     };

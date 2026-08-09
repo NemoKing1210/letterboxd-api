@@ -33,4 +33,9 @@ describe('moviesToCsv', () => {
       'id,title,year,slug,url,poster,genres,director,rating,favorite,watchedDate\r\n',
     );
   });
+
+  it('limits columns when fields are provided', () => {
+    const csv = moviesToCsv([sample], ['title', 'year', 'rating']);
+    expect(csv).toBe('title,year,rating\r\n"Arrival, Part 1",2016,4.5\r\n');
+  });
 });

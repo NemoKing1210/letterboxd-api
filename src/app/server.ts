@@ -30,6 +30,18 @@ import { searchBodyOpenApiSchema, searchBodySchema } from '../features/search/sc
 import { movieQuerySchema, usernameParamSchema, userProfileSchema, userQuerySchema } from '../features/users/schemas/user-schemas';
 import { syncResponseSchema } from '../features/synchronization/schemas/sync-schemas';
 import { AppError, ValidationError } from '../shared/errors/app-error';
+import {
+  MOVIE_DTO_FIELDS,
+  RATINGS_FIELDS,
+  RECOMMENDATION_ITEM_FIELDS,
+  STATISTICS_FIELDS,
+  SYNC_RESPONSE_FIELDS,
+  USER_PROFILE_FIELDS,
+  applyItemFields,
+  applyObjectFields,
+  fieldsOnlyQuerySchema,
+  fieldsQueryField,
+} from '../shared/utils/fields';
 
 type AppVariables = {
   requestId: string;
@@ -38,6 +50,18 @@ type AppVariables = {
 
 const exportRouteParamsSchema = usernameParamSchema.extend({
   format: exportFormatSchema,
+});
+
+const userProfileFieldsQuerySchema = fieldsOnlyQuerySchema(USER_PROFILE_FIELDS);
+const ratingsFieldsQuerySchema = fieldsOnlyQuerySchema(RATINGS_FIELDS);
+const statisticsFieldsQuerySchema = fieldsOnlyQuerySchema(STATISTICS_FIELDS);
+const syncFieldsQuerySchema = fieldsOnlyQuerySchema(SYNC_RESPONSE_FIELDS);
+const movieFieldsQuerySchema = z.object({
+  fields: fieldsQueryField(MOVIE_DTO_FIELDS),
+});
+const recommendationsQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(20).optional().default(5),
+  fields: fieldsQueryField(RECOMMENDATION_ITEM_FIELDS),
 });
 
 const ErrorSchema = z.object({
@@ -215,7 +239,7 @@ export function createApp(container: AppContainer) {
   app.openapi(listUsersRoute, async (c) => {
     const query = c.req.valid('query');
     const result = await container.usersService.listUsers(query);
-    return c.json(result, 200);
+    return c.json(applyItemFields(result, query.fields), 200);
   });
 
   const getUserRoute = createRoute({
@@ -225,6 +249,7 @@ export function createApp(container: AppContainer) {
     summary: 'Get user profile',
     request: {
       params: usernameParamSchema,
+      query: userProfileFieldsQuerySchema,
     },
     responses: {
       200: {
@@ -240,8 +265,9 @@ export function createApp(container: AppContainer) {
 
   app.openapi(getUserRoute, async (c) => {
     const { username } = c.req.valid('param');
+    const { fields } = c.req.valid('query');
     const profile = await container.usersService.getProfile(username);
-    return c.json(profile, 200);
+    return c.json(applyObjectFields(profile, fields), 200);
   });
 
   const getMoviesRoute = createRoute({
@@ -265,7 +291,7 @@ export function createApp(container: AppContainer) {
     const { username } = c.req.valid('param');
     const query = c.req.valid('query');
     const result = await container.moviesService.listMovies(username, query);
-    return c.json(result, 200);
+    return c.json(applyItemFields(result, query.fields), 200);
   });
 
   const exportMoviesRoute = createRoute({
@@ -274,7 +300,7 @@ export function createApp(container: AppContainer) {
     tags: ['Movies'],
     summary: 'Export user movies as JSON or CSV',
     description:
-      'Same filters/sort as list movies. Omit `limit` to export all matches (capped at 10000). Stricter rate limit applies. Uses stored metadata only (no on-demand enrichment).',
+      'Same filters/sort as list movies. Omit `limit` to export all matches (capped at 10000). Optional `fields` limits MovieDto keys / CSV columns. Stricter rate limit applies. Uses stored metadata only (no on-demand enrichment).',
     request: {
       params: exportRouteParamsSchema,
       query: movieExportQuerySchema,
@@ -303,7 +329,10 @@ export function createApp(container: AppContainer) {
     path: '/api/users/{username}/ratings',
     tags: ['Ratings'],
     summary: 'Get ratings summary',
-    request: { params: usernameParamSchema },
+    request: {
+      params: usernameParamSchema,
+      query: ratingsFieldsQuerySchema,
+    },
     responses: {
       200: {
         description: 'Ratings summary',
@@ -314,8 +343,9 @@ export function createApp(container: AppContainer) {
 
   app.openapi(getRatingsRoute, async (c) => {
     const { username } = c.req.valid('param');
+    const { fields } = c.req.valid('query');
     const result = await container.ratingsService.getRatings(username);
-    return c.json(result, 200);
+    return c.json(applyObjectFields(result, fields), 200);
   });
 
   const getFavoritesRoute = createRoute({
@@ -339,7 +369,7 @@ export function createApp(container: AppContainer) {
     const { username } = c.req.valid('param');
     const query = c.req.valid('query');
     const result = await container.favoritesService.listFavoriteMovies(username, query);
-    return c.json(result, 200);
+    return c.json(applyItemFields(result, query.fields), 200);
   });
 
   const exportFavoritesRoute = createRoute({
@@ -348,7 +378,7 @@ export function createApp(container: AppContainer) {
     tags: ['Favorites'],
     summary: 'Export favorite movies as JSON or CSV',
     description:
-      'Same filters/sort as list favorites. Omit `limit` to export all matches (capped at 10000). Stricter rate limit applies. Uses stored metadata only (no on-demand enrichment).',
+      'Same filters/sort as list favorites. Omit `limit` to export all matches (capped at 10000). Optional `fields` limits MovieDto keys / CSV columns. Stricter rate limit applies. Uses stored metadata only (no on-demand enrichment).',
     request: {
       params: exportRouteParamsSchema,
       query: movieExportQuerySchema,
@@ -379,6 +409,7 @@ export function createApp(container: AppContainer) {
     summary: 'Advanced movie search with nested filter DSL',
     request: {
       params: usernameParamSchema,
+      query: movieFieldsQuerySchema,
       body: {
         content: {
           'application/json': {
@@ -397,13 +428,14 @@ export function createApp(container: AppContainer) {
 
   app.openapi(searchMoviesRoute, async (c) => {
     const { username } = c.req.valid('param');
+    const { fields } = c.req.valid('query');
     const raw = c.req.valid('json');
     const parsed = searchBodySchema.safeParse(raw);
     if (!parsed.success) {
       throw new ValidationError('Invalid search body', parsed.error.flatten());
     }
     const result = await container.searchService.search(username, parsed.data);
-    return c.json(result, 200);
+    return c.json(applyItemFields(result, fields), 200);
   });
 
   const getFavoriteDirectorsRoute = createRoute({
@@ -427,7 +459,7 @@ export function createApp(container: AppContainer) {
     const { username } = c.req.valid('param');
     const query = c.req.valid('query');
     const result = await container.favoritesService.listFavoriteFacet(username, 'directors', query);
-    return c.json(result, 200);
+    return c.json(applyItemFields(result, query.fields), 200);
   });
 
   const getFavoriteGenresRoute = createRoute({
@@ -451,7 +483,7 @@ export function createApp(container: AppContainer) {
     const { username } = c.req.valid('param');
     const query = c.req.valid('query');
     const result = await container.favoritesService.listFavoriteFacet(username, 'genres', query);
-    return c.json(result, 200);
+    return c.json(applyItemFields(result, query.fields), 200);
   });
 
   const getFavoriteYearsRoute = createRoute({
@@ -475,7 +507,7 @@ export function createApp(container: AppContainer) {
     const { username } = c.req.valid('param');
     const query = c.req.valid('query');
     const result = await container.favoritesService.listFavoriteFacet(username, 'years', query);
-    return c.json(result, 200);
+    return c.json(applyItemFields(result, query.fields), 200);
   });
 
   const getStatisticsRoute = createRoute({
@@ -483,7 +515,10 @@ export function createApp(container: AppContainer) {
     path: '/api/users/{username}/statistics',
     tags: ['Statistics'],
     summary: 'Get user statistics',
-    request: { params: usernameParamSchema },
+    request: {
+      params: usernameParamSchema,
+      query: statisticsFieldsQuerySchema,
+    },
     responses: {
       200: {
         description: 'Statistics',
@@ -494,8 +529,9 @@ export function createApp(container: AppContainer) {
 
   app.openapi(getStatisticsRoute, async (c) => {
     const { username } = c.req.valid('param');
+    const { fields } = c.req.valid('query');
     const result = await container.statisticsService.getStatistics(username);
-    return c.json(result, 200);
+    return c.json(applyObjectFields(result, fields), 200);
   });
 
   const syncRoute = createRoute({
@@ -503,7 +539,10 @@ export function createApp(container: AppContainer) {
     path: '/api/users/{username}/sync',
     tags: ['Synchronization'],
     summary: 'Sync Letterboxd user data',
-    request: { params: usernameParamSchema },
+    request: {
+      params: usernameParamSchema,
+      query: syncFieldsQuerySchema,
+    },
     responses: {
       200: {
         description: 'Sync result',
@@ -514,8 +553,9 @@ export function createApp(container: AppContainer) {
 
   app.openapi(syncRoute, async (c) => {
     const { username } = c.req.valid('param');
+    const { fields } = c.req.valid('query');
     const result = await container.syncService.syncLetterboxdUser(username);
-    return c.json(result, 200);
+    return c.json(applyObjectFields(result, fields), 200);
   });
 
   const recommendationsRoute = createRoute({
@@ -525,9 +565,7 @@ export function createApp(container: AppContainer) {
     summary: 'Get personalized film recommendations',
     request: {
       params: usernameParamSchema,
-      query: z.object({
-        limit: z.coerce.number().int().min(1).max(20).optional().default(5),
-      }),
+      query: recommendationsQuerySchema,
     },
     responses: {
       200: {
@@ -539,9 +577,9 @@ export function createApp(container: AppContainer) {
 
   app.openapi(recommendationsRoute, async (c) => {
     const { username } = c.req.valid('param');
-    const { limit } = c.req.valid('query');
+    const { limit, fields } = c.req.valid('query');
     const items = await container.recommendationService.recommend(username, { limit });
-    return c.json({ items }, 200);
+    return c.json(applyItemFields({ items }, fields), 200);
   });
 
   // Fallback for non-openapi health already registered
@@ -572,7 +610,7 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '3.5.0',
+      version: '3.6.0',
       description:
         'Analyze Letterboxd film taste: sync, filter, search, statistics, AI recommendations, and movie/favorites export (JSON/CSV).',
     },

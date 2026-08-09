@@ -5,6 +5,7 @@ import {
   MAX_LIMIT,
   SEARCH_QUERY_MAX_LENGTH,
 } from '../../../shared/constants';
+import { MOVIE_DTO_FIELDS, USER_PROFILE_FIELDS, fieldsQueryField } from '../../../shared/utils/fields';
 
 export const usernameParamSchema = z.object({
   username: z
@@ -42,6 +43,8 @@ export const movieQuerySchema = z
     sort: movieSortSchema.default('rating_desc'),
     page: z.coerce.number().int().min(1).default(DEFAULT_PAGE),
     limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+    /** Comma-separated MovieDto keys to include in each `items[]` entry. */
+    fields: fieldsQueryField(MOVIE_DTO_FIELDS),
   })
   .superRefine((data, ctx) => {
     if (data.q !== undefined && data.search !== undefined && data.q !== data.search) {
@@ -124,6 +127,8 @@ export const userQuerySchema = z
     sort: userSortSchema.default('username_asc'),
     page: z.coerce.number().int().min(1).default(DEFAULT_PAGE),
     limit: z.coerce.number().int().min(1).max(MAX_LIMIT).default(DEFAULT_LIMIT),
+    /** Comma-separated UserProfile keys to include in each `items[]` entry. */
+    fields: fieldsQueryField(USER_PROFILE_FIELDS),
   })
   .superRefine((data, ctx) => {
     if (data.q !== undefined && data.search !== undefined && data.q !== data.search) {

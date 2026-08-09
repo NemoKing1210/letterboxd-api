@@ -20,6 +20,21 @@ When auth is enabled, OpenAPI advertises the active security schemes at `/openap
 
 ## Endpoints
 
+### Sparse fieldsets (`fields`)
+
+Most data endpoints accept an optional query param `fields` — a comma-separated list of allowlisted property names.
+
+| Behavior | Detail |
+| -------- | ------ |
+| Omit / blank | Full response (unchanged) |
+| List / paginated / export JSON | Filters keys on each `items[]` element; `page`, `limit`, `total`, `totalPages` (and export `total`) stay |
+| Single-object responses | Filters top-level keys (`profile`, `ratings`, `statistics`, `sync`) |
+| CSV export | Restricts columns (order follows `fields`) |
+| Unknown name | `400` `VALIDATION_ERROR` |
+| Nested objects | Included parent keys keep nested payloads full (no dot-paths) |
+
+`POST /api/users/:username/search` uses the same query param (`?fields=title,year`), not the JSON body.
+
 ### Health
 
 `GET /health`
@@ -59,6 +74,7 @@ Query params:
 | `q` / `search`                  | Case-insensitive username contains (aliases; must be identical if both are set)                                                                                                                  |
 | `sort`                          | `username_asc`, `username_desc`, `created_desc`, `created_asc`, `updated_desc`, `updated_asc`, `followers_desc`, `followers_asc`, `following_desc`, `following_asc`, `movies_desc`, `movies_asc` |
 | `page` / `limit`                | Pagination (`limit` default **20**, max **100**)                                                                                                                                                 |
+| `fields`                        | Sparse fieldset for each profile in `items[]` (UserProfile keys)                                                                                                                                 |
 
 ```json
 {
@@ -97,6 +113,8 @@ Each `items[]` entry uses the same shape as `GET /api/users/:username`.
 ### User profile
 
 `GET /api/users/:username`
+
+Optional query: `fields` — sparse fieldset of UserProfile keys.
 
 ```json
 {
@@ -162,6 +180,7 @@ Query params:
 | `q` / `search`            | Case-insensitive title or slug contains (aliases; must be identical if both are set)       |
 | `sort`                    | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
 | `page` / `limit`          | Pagination (`limit` default **20**, max **100**)                                           |
+| `fields`                  | Sparse fieldset for each Movie in `items[]`                                                |
 
 Paginated response: `{ items: Movie[], page, limit, total, totalPages }`. Omitting `limit` still applies the default of 20 — unbounded lists are not supported.
 
@@ -176,6 +195,7 @@ Paginated response: `{ items: Movie[], page, limit, total, totalPages }`. Omitti
 | ------- | ------------------------------------------------------------------------ |
 | `limit` | Optional. Omit to export **all** matches (hard cap **10000**).           |
 | `page`  | Used only when `limit` is set (default page **1**).                      |
+| `fields`| MovieDto keys / CSV columns to include (order preserved).                |
 
 - **JSON** — `{ items: Movie[], total }` with `Content-Type: application/json` and `Content-Disposition: attachment; filename="{username}-movies.json"` (or `...-favorites.json`).
 - **CSV** — UTF-8 CSV of the same movie fields (`genres` joined with `|`), `text/csv; charset=utf-8`, matching filename `.csv`.
@@ -215,6 +235,7 @@ JSON body with optional nested `filter`, plus `sort` / `page` / `limit` (same de
 - **Fields:** `title`, `slug`, `director`, `genre`, `year`, `rating`, `favorite`, `watchedDate`
 - **Operators:** strings — `eq`, `neq`, `contains`, `startsWith`, `endsWith`, `in`; genre — `eq`, `in`; numbers — `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `between`, `in`; `favorite` — `eq`; `watchedDate` — `eq`, `gte`, `lte`, `between` (ISO datetimes)
 - Omit `filter` to return the full library (paginated)
+- Optional query `fields` — sparse MovieDto keys on `items[]` (same as `/movies`)
 
 Response: same paginated `Movie[]` shape as `/movies`.
 
@@ -224,15 +245,17 @@ Response: same paginated `Movie[]` shape as `/movies`.
 
 Returns average, count, best/worst films (full `Movie` objects), rating distribution.
 
+Optional query `fields` — top-level keys: `averageRating`, `ratingsCount`, `bestMovies`, `worstMovies`, `distribution`.
+
 ### Favorites
 
 `GET /api/users/:username/favorites`
 
-Paginated favorite movies (liked flag or rating ≥ 4.5). Same query filters/sort/pagination as `/movies` (`limit` default **20**, max **100**).
+Paginated favorite movies (liked flag or rating ≥ 4.5). Same query filters/sort/pagination as `/movies` (`limit` default **20**, max **100**), including optional `fields`.
 
 Response: `{ items: Movie[], page, limit, total, totalPages }`.
 
-Facet lists (same pagination; sorted by `count` desc, then `name` asc):
+Facet lists (same pagination; sorted by `count` desc, then `name` asc; optional `fields` = `name`,`count`):
 
 | Path                                           | Description                                                    |
 | ---------------------------------------------- | -------------------------------------------------------------- |
@@ -243,6 +266,8 @@ Facet lists (same pagination; sorted by `count` desc, then `name` asc):
 ### Statistics
 
 `GET /api/users/:username/statistics`
+
+Optional query `fields` — top-level keys of the payload below.
 
 ```json
 {
@@ -260,13 +285,15 @@ Facet lists (same pagination; sorted by `count` desc, then `name` asc):
 
 Forces a Letterboxd list + diary scrape and upserts local rows. Film genres/directors/posters are **not** filled during sync — they are enriched on demand when those movies appear in API responses. Diary dates are best-effort.
 
+Optional query `fields` — keys of the sync response object.
+
 ### Recommendations
 
 `GET /api/users/:username/recommendations?limit=5`
 
 Personalized recommendations when `OPENAI_API_KEY` is set (taste embeddings + pgvector ANN, optional LLM reasons). Without a key (or on AI failure), falls back to the rule-based engine.
 
-Response items may include optional `slug`, `movieId`, `year`, and `poster` when the AI path returns catalog films.
+Response items may include optional `slug`, `movieId`, `year`, and `poster` when the AI path returns catalog films. Optional `fields` selects keys on each recommendation item.
 
 ## Errors
 

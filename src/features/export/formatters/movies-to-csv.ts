@@ -1,18 +1,7 @@
 import type { MovieDto } from '../../movies/schemas/movie-schemas';
+import { MOVIE_DTO_FIELDS, type MovieDtoField } from '../../../shared/utils/fields';
 
-const CSV_COLUMNS = [
-  'id',
-  'title',
-  'year',
-  'slug',
-  'url',
-  'poster',
-  'genres',
-  'director',
-  'rating',
-  'favorite',
-  'watchedDate',
-] as const;
+const CSV_COLUMNS = MOVIE_DTO_FIELDS;
 
 function escapeCsvCell(value: string): string {
   if (/[",\r\n]/.test(value)) {
@@ -28,28 +17,31 @@ function cellFromValue(value: string | number | boolean | null | undefined): str
   return escapeCsvCell(String(value));
 }
 
-function rowFromMovie(movie: MovieDto): string {
-  return [
-    cellFromValue(movie.id),
-    cellFromValue(movie.title),
-    cellFromValue(movie.year),
-    cellFromValue(movie.slug),
-    cellFromValue(movie.url),
-    cellFromValue(movie.poster),
-    cellFromValue(movie.genres.join('|')),
-    cellFromValue(movie.director),
-    cellFromValue(movie.rating),
-    cellFromValue(movie.favorite),
-    cellFromValue(movie.watchedDate),
-  ].join(',');
+function cellFromMovie(movie: MovieDto, column: MovieDtoField): string {
+  if (column === 'genres') {
+    return cellFromValue(movie.genres.join('|'));
+  }
+  return cellFromValue(movie[column]);
+}
+
+function rowFromMovie(movie: MovieDto, columns: readonly MovieDtoField[]): string {
+  return columns.map((column) => cellFromMovie(movie, column)).join(',');
+}
+
+function resolveColumns(fields?: readonly string[]): readonly MovieDtoField[] {
+  if (!fields || fields.length === 0) {
+    return CSV_COLUMNS;
+  }
+  return fields as MovieDtoField[];
 }
 
 /** Serialize movie DTOs to RFC-friendly CSV (header + rows, CRLF line endings). */
-export function moviesToCsv(movies: MovieDto[]): string {
-  const header = CSV_COLUMNS.join(',');
+export function moviesToCsv(movies: MovieDto[], fields?: readonly string[]): string {
+  const columns = resolveColumns(fields);
+  const header = columns.join(',');
   if (movies.length === 0) {
     return `${header}\r\n`;
   }
-  const rows = movies.map(rowFromMovie);
+  const rows = movies.map((movie) => rowFromMovie(movie, columns));
   return `${header}\r\n${rows.join('\r\n')}\r\n`;
 }

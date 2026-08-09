@@ -25,4 +25,14 @@ describe('movieExportQuerySchema', () => {
     const result = movieExportQuerySchema.safeParse({ q: 'a', search: 'b' });
     expect(result.success).toBe(false);
   });
+
+  it('parses fields CSV into string[]', () => {
+    const parsed = movieExportQuerySchema.parse({ fields: 'title,year' });
+    expect(parsed.fields).toEqual(['title', 'year']);
+  });
+
+  it('rejects unknown export fields', () => {
+    const result = movieExportQuerySchema.safeParse({ fields: 'title,nope' });
+    expect(result.success).toBe(false);
+  });
 });

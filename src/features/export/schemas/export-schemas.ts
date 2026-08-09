@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { MAX_EXPORT_LIMIT, SEARCH_QUERY_MAX_LENGTH } from '../../../shared/constants';
+import { MOVIE_DTO_FIELDS, fieldsQueryField } from '../../../shared/utils/fields';
 import { movieSortSchema } from '../../users/schemas/user-schemas';
 import { movieDtoSchema } from '../../movies/schemas/movie-schemas';
 
@@ -29,6 +30,8 @@ export const movieExportQuerySchema = z
     /** Optional; omit to export all matching rows (up to MAX_EXPORT_LIMIT). */
     page: z.coerce.number().int().min(1).optional(),
     limit: z.coerce.number().int().min(1).max(MAX_EXPORT_LIMIT).optional(),
+    /** Comma-separated MovieDto keys / CSV columns to include. */
+    fields: fieldsQueryField(MOVIE_DTO_FIELDS),
   })
   .superRefine((data, ctx) => {
     if (data.q !== undefined && data.search !== undefined && data.q !== data.search) {
