@@ -1,19 +1,49 @@
 meta {
-  name: Get Favorites
+  name: List Favorites
   type: http
   seq: 4
 }
 
 get {
-  url: {{baseUrl}}/api/users/{{username}}/favorites
+  url: {{baseUrl}}/api/users/{{username}}/favorites?sort=rating_desc&page=1&limit=20
+}
+
+params:query {
+  ~ratingMin: 4
+  ~ratingMax: 5
+  ~year: 2020
+  ~yearFrom: 2000
+  ~yearTo: 2024
+  ~genre: sci-fi
+  ~director: Nolan
+  sort: rating_desc
+  page: 1
+  limit: 20
 }
 
 docs {
-  Favorite movies (liked or ≥ 4.5), directors, genres, years.
+  Paginated favorite movies (liked flag or rating ≥ 4.5).
+
+  Same filters/sort/pagination as List Movies (`limit` default 20, max 100).
+
+  Response: `{ items: Movie[], page, limit, total, totalPages }`.
+
+  Disabled query params (prefixed with `~` in the file) can be enabled in Bruno UI.
 }
 
 tests {
   test("status is 200", function() {
     expect(res.getStatus()).to.equal(200);
+  });
+
+  test("items is an array", function() {
+    expect(res.body.items).to.be.an("array");
+  });
+
+  test("pagination fields present", function() {
+    expect(res.body).to.have.property("page");
+    expect(res.body).to.have.property("limit");
+    expect(res.body).to.have.property("total");
+    expect(res.body).to.have.property("totalPages");
   });
 }

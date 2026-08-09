@@ -16,7 +16,7 @@ vars:pre-request {
 }
 
 docs {
-  # Letterboxd Intelligence API
+  # Letterboxd API
   
   Sync Letterboxd data, filter movies, and inspect ratings / favorites / statistics.
   
@@ -26,6 +26,13 @@ docs {
   2. Select the **Local** environment
   3. Set `username` to a Letterboxd username
   4. Run **Sync User** once before reading derived endpoints (or hit Get Profile to lazy-sync)
+  
+  ## Favorites
+  
+  - **List Favorites** — paginated liked movies (same filters as List Movies)
+  - **List Favorite Directors / Genres / Years** — paginated `{ name, count }` facets
+  
+  List endpoints default `limit` to 20 (max 100).
   
   Interactive docs: `{{baseUrl}}/docs`
 }

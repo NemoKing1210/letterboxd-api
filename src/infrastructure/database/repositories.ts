@@ -1,5 +1,5 @@
 import type { Movie, Prisma, PrismaClient, SyncHistory, SyncStatus, User, UserMovie } from '@prisma/client';
-import { MAX_LIMIT } from '../../shared/constants';
+import { FAVORITE_RATING_THRESHOLD, MAX_LIMIT } from '../../shared/constants';
 import { clamp } from '../../shared/utils';
 
 export type UserWithMovies = User & {
@@ -15,6 +15,8 @@ export type MovieListFilters = {
   genre?: string;
   director?: string;
   sort?: 'rating_desc' | 'rating_asc' | 'date_desc' | 'date_asc' | 'year_desc' | 'year_asc' | 'title_asc';
+  /** When true, only liked films: favorite flag or rating >= FAVORITE_RATING_THRESHOLD. */
+  likedOnly?: boolean;
   page: number;
   limit: number;
 };
@@ -169,16 +171,24 @@ export class PrismaUserMovieRepository implements UserMovieRepository {
     userId: string,
     filters: MovieListFilters,
   ): Promise<{ items: Array<UserMovie & { movie: Movie }>; total: number }> {
+    const andClauses: Prisma.UserMovieWhereInput[] = [];
+    if (filters.likedOnly) {
+      andClauses.push({
+        OR: [{ favorite: true }, { rating: { gte: FAVORITE_RATING_THRESHOLD } }],
+      });
+    }
+    if (filters.ratingMin !== undefined || filters.ratingMax !== undefined) {
+      andClauses.push({
+        rating: {
+          ...(filters.ratingMin !== undefined ? { gte: filters.ratingMin } : {}),
+          ...(filters.ratingMax !== undefined ? { lte: filters.ratingMax } : {}),
+        },
+      });
+    }
+
     const where: Prisma.UserMovieWhereInput = {
       userId,
-      ...(filters.ratingMin !== undefined || filters.ratingMax !== undefined
-        ? {
-            rating: {
-              ...(filters.ratingMin !== undefined ? { gte: filters.ratingMin } : {}),
-              ...(filters.ratingMax !== undefined ? { lte: filters.ratingMax } : {}),
-            },
-          }
-        : {}),
+      ...(andClauses.length > 0 ? { AND: andClauses } : {}),
       movie: {
         ...(filters.year !== undefined ? { year: filters.year } : {}),
         ...(filters.yearFrom !== undefined || filters.yearTo !== undefined

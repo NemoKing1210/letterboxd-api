@@ -152,7 +152,7 @@ export class SynchronizationService {
       this.deps.cache.delete(CACHE_KEYS.userProfile(username)),
       this.deps.cache.delete(CACHE_KEYS.userStats(username)),
       this.deps.cache.delete(CACHE_KEYS.userRatings(username)),
-      this.deps.cache.delete(CACHE_KEYS.userFavorites(username)),
+      this.deps.cache.delete(CACHE_KEYS.userFavoriteFacets(username)),
     ]);
   }
 }

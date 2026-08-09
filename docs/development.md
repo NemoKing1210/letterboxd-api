@@ -54,7 +54,11 @@ Husky runs lint-staged on pre-commit.
 - Keep `LETTERBOXD_PAGE_DELAY_MS` ≥ 500 for real scrapes
 - On-demand enrichment uses `LETTERBOXD_ENRICH_CONCURRENCY` (default 8) and `LETTERBOXD_ENRICH_RETRIES` (default 3); only movies in the response are enriched and then flagged `Movie.enriched`
 - Transient Letterboxd/HTTP failures use full-jitter backoff at both HTTP and enrichment layers
-- Movie list `limit` cannot exceed 100
+- List endpoints default `limit` to 20 (max 100); omitting `limit` still applies the default
 - Local Bun server uses `idleTimeout: 255` because first-page enrichment can exceed the default 10s request timeout
 - Scraper `HttpClient` sends navigation-like headers so Cloudflare is less likely to challenge requests; challenges are retried with backoff
 - Optional outbound proxy: set `HTTPS_PROXY` / `HTTP_PROXY` (and `NO_PROXY` if needed). Applies only to external HTTP (Letterboxd scrape, future APIs) — not to PostgreSQL/Prisma.
+
+## Bruno
+
+Open the [`bruno/`](../bruno/) folder in [Bruno](https://www.usebruno.com/). Select the **Local** environment, set `username`, then run **Sync User** (or **Get User Profile** for lazy sync) before hitting derived endpoints.

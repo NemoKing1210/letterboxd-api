@@ -73,7 +73,7 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
       listMovies: vi.fn(async () => ({
         items: [],
         page: 1,
-        limit: 50,
+        limit: 20,
         total: 0,
         totalPages: 1,
       })),
@@ -88,11 +88,19 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
       })),
     } as unknown as AppContainer['ratingsService'],
     favoritesService: {
-      getFavorites: vi.fn(async () => ({
-        favoriteMovies: [],
-        favoriteDirectors: [],
-        favoriteGenres: [],
-        favoriteYears: [],
+      listFavoriteMovies: vi.fn(async () => ({
+        items: [],
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 1,
+      })),
+      listFavoriteFacet: vi.fn(async () => ({
+        items: [],
+        page: 1,
+        limit: 20,
+        total: 0,
+        totalPages: 1,
       })),
     } as unknown as AppContainer['favoritesService'],
     statisticsService: {
@@ -142,5 +150,22 @@ describe('API integration', () => {
     const app = createApp(createTestContainer());
     const res = await app.request('/api/users/bad%20name');
     expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it('lists favorite movies and facets', async () => {
+    const container = createTestContainer();
+    const app = createApp(container);
+
+    const moviesRes = await app.request('/api/users/demo/favorites');
+    expect(moviesRes.status).toBe(200);
+    expect(container.favoritesService.listFavoriteMovies).toHaveBeenCalled();
+
+    const directorsRes = await app.request('/api/users/demo/favorites/directors');
+    expect(directorsRes.status).toBe(200);
+    expect(container.favoritesService.listFavoriteFacet).toHaveBeenCalledWith(
+      'demo',
+      'directors',
+      expect.objectContaining({ page: 1, limit: 20 }),
+    );
   });
 });

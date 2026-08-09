@@ -13,7 +13,7 @@ describe('user schemas', () => {
   it('applies movie query defaults', () => {
     const query = movieQuerySchema.parse({});
     expect(query.page).toBe(1);
-    expect(query.limit).toBe(50);
+    expect(query.limit).toBe(20);
     expect(query.sort).toBe('rating_desc');
   });
 

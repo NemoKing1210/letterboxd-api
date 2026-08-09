@@ -8,6 +8,10 @@ import {
   requestLoggingMiddleware,
   securityHeadersMiddleware,
 } from './middleware';
+import {
+  favoritesFacetQuerySchema,
+  namedCountSchema,
+} from '../features/favorites/schemas/favorites-schemas';
 import { movieDtoSchema } from '../features/movies/schemas/movie-schemas';
 import { movieQuerySchema, usernameParamSchema, userProfileSchema } from '../features/users/schemas/user-schemas';
 import { syncResponseSchema } from '../features/synchronization/schemas/sync-schemas';
@@ -42,11 +46,12 @@ const RatingsSchema = z.object({
   distribution: z.record(z.number()),
 });
 
-const FavoritesSchema = z.object({
-  favoriteMovies: z.array(movieDtoSchema),
-  favoriteDirectors: z.array(z.object({ name: z.string(), count: z.number() })),
-  favoriteGenres: z.array(z.object({ name: z.string(), count: z.number() })),
-  favoriteYears: z.array(z.object({ name: z.string(), count: z.number() })),
+const PaginatedNamedCountsSchema = z.object({
+  items: z.array(namedCountSchema),
+  page: z.number(),
+  limit: z.number(),
+  total: z.number(),
+  totalPages: z.number(),
 });
 
 const StatisticsSchema = z.object({
@@ -216,19 +221,95 @@ export function createApp(container: AppContainer) {
     method: 'get',
     path: '/api/users/{username}/favorites',
     tags: ['Favorites'],
-    summary: 'Get favorites summary',
-    request: { params: usernameParamSchema },
+    summary: 'List favorite movies with filters',
+    request: {
+      params: usernameParamSchema,
+      query: movieQuerySchema,
+    },
     responses: {
       200: {
-        description: 'Favorites summary',
-        content: { 'application/json': { schema: FavoritesSchema } },
+        description: 'Paginated favorite movies (liked or rating ≥ 4.5)',
+        content: { 'application/json': { schema: PaginatedMoviesSchema } },
       },
     },
   });
 
   app.openapi(getFavoritesRoute, async (c) => {
     const { username } = c.req.valid('param');
-    const result = await container.favoritesService.getFavorites(username);
+    const query = c.req.valid('query');
+    const result = await container.favoritesService.listFavoriteMovies(username, query);
+    return c.json(result, 200);
+  });
+
+  const getFavoriteDirectorsRoute = createRoute({
+    method: 'get',
+    path: '/api/users/{username}/favorites/directors',
+    tags: ['Favorites'],
+    summary: 'List favorite directors',
+    request: {
+      params: usernameParamSchema,
+      query: favoritesFacetQuerySchema,
+    },
+    responses: {
+      200: {
+        description: 'Paginated favorite directors',
+        content: { 'application/json': { schema: PaginatedNamedCountsSchema } },
+      },
+    },
+  });
+
+  app.openapi(getFavoriteDirectorsRoute, async (c) => {
+    const { username } = c.req.valid('param');
+    const query = c.req.valid('query');
+    const result = await container.favoritesService.listFavoriteFacet(username, 'directors', query);
+    return c.json(result, 200);
+  });
+
+  const getFavoriteGenresRoute = createRoute({
+    method: 'get',
+    path: '/api/users/{username}/favorites/genres',
+    tags: ['Favorites'],
+    summary: 'List favorite genres',
+    request: {
+      params: usernameParamSchema,
+      query: favoritesFacetQuerySchema,
+    },
+    responses: {
+      200: {
+        description: 'Paginated favorite genres',
+        content: { 'application/json': { schema: PaginatedNamedCountsSchema } },
+      },
+    },
+  });
+
+  app.openapi(getFavoriteGenresRoute, async (c) => {
+    const { username } = c.req.valid('param');
+    const query = c.req.valid('query');
+    const result = await container.favoritesService.listFavoriteFacet(username, 'genres', query);
+    return c.json(result, 200);
+  });
+
+  const getFavoriteYearsRoute = createRoute({
+    method: 'get',
+    path: '/api/users/{username}/favorites/years',
+    tags: ['Favorites'],
+    summary: 'List favorite years',
+    request: {
+      params: usernameParamSchema,
+      query: favoritesFacetQuerySchema,
+    },
+    responses: {
+      200: {
+        description: 'Paginated favorite years',
+        content: { 'application/json': { schema: PaginatedNamedCountsSchema } },
+      },
+    },
+  });
+
+  app.openapi(getFavoriteYearsRoute, async (c) => {
+    const { username } = c.req.valid('param');
+    const query = c.req.valid('query');
+    const result = await container.favoritesService.listFavoriteFacet(username, 'years', query);
     return c.json(result, 200);
   });
 
@@ -303,7 +384,7 @@ export function createApp(container: AppContainer) {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '1.5.0',
+      version: '2.0.1',
       description:
         'Analyze Letterboxd film taste: sync, filter, statistics, and AI-ready recommendations.',
     },

@@ -6,8 +6,9 @@ import type {
 } from '../../../infrastructure/database';
 import type { Env } from '../../../app/config/env';
 import type { AppLogger } from '../../../infrastructure/logger';
-import { CACHE_KEYS, MAX_LIMIT } from '../../../shared/constants';
-import { countBy, normalizeUsername, topN } from '../../../shared/utils';
+import { CACHE_KEYS, FAVORITE_RATING_THRESHOLD } from '../../../shared/constants';
+import { createPaginatedResult, type PaginatedResult } from '../../../shared/types';
+import { countBy, normalizeUsername } from '../../../shared/utils';
 import { toMovieDto } from '../../movies/mappers/to-movie-dto';
 import type { MovieDto } from '../../movies/schemas/movie-schemas';
 import type { FilmEnrichmentService } from '../../movies/service/film-enrichment-service';
@@ -15,14 +16,17 @@ import {
   ensureLocalUser,
   type UserSyncTrigger,
 } from '../../users/service/ensure-local-user';
+import type {
+  FavoritesFacetKind,
+  FavoritesFacetQuery,
+  MovieQuery,
+  NamedCount,
+} from '../schemas/favorites-schemas';
 
-const MAX_FAVORITE_MOVIES = 20;
-
-export type FavoritesSummary = {
-  favoriteMovies: MovieDto[];
-  favoriteDirectors: Array<{ name: string; count: number }>;
-  favoriteGenres: Array<{ name: string; count: number }>;
-  favoriteYears: Array<{ name: string; count: number }>;
+export type FavoriteFacetsCache = {
+  directors: NamedCount[];
+  genres: NamedCount[];
+  years: NamedCount[];
 };
 
 export type FavoritesServiceDeps = {
@@ -41,16 +45,56 @@ export type FavoritesServiceDeps = {
 export class FavoritesService {
   constructor(private readonly deps: FavoritesServiceDeps) {}
 
-  async getFavorites(username: string): Promise<FavoritesSummary> {
+  async listFavoriteMovies(
+    username: string,
+    query: MovieQuery,
+  ): Promise<PaginatedResult<MovieDto>> {
     const normalized = normalizeUsername(username);
     const user = await ensureLocalUser(normalized, this.deps);
 
-    const cacheKey = CACHE_KEYS.userFavorites(normalized);
-    const cached = await this.deps.cache.get<FavoritesSummary>(cacheKey);
+    const { items, total } = await this.deps.userMovies.findFiltered(user.id, {
+      ...query,
+      likedOnly: true,
+    });
+    const enriched = await this.deps.enrichment.enrichEntries(items);
+
+    return createPaginatedResult(
+      enriched.map(toMovieDto),
+      total,
+      query.page,
+      query.limit,
+    );
+  }
+
+  async listFavoriteFacet(
+    username: string,
+    facet: FavoritesFacetKind,
+    query: FavoritesFacetQuery,
+  ): Promise<PaginatedResult<NamedCount>> {
+    const normalized = normalizeUsername(username);
+    await ensureLocalUser(normalized, this.deps);
+
+    const facets = await this.loadFavoriteFacets(normalized);
+    const all = facets[facet];
+    const start = (query.page - 1) * query.limit;
+    const items = all.slice(start, start + query.limit);
+
+    return createPaginatedResult(items, all.length, query.page, query.limit);
+  }
+
+  private async loadFavoriteFacets(username: string): Promise<FavoriteFacetsCache> {
+    const cacheKey = CACHE_KEYS.userFavoriteFacets(username);
+    const cached = await this.deps.cache.get<FavoriteFacetsCache>(cacheKey);
     if (cached) return cached;
 
+    const user = await this.deps.users.findByUsername(username);
+    if (!user) {
+      const empty: FavoriteFacetsCache = { directors: [], genres: [], years: [] };
+      return empty;
+    }
+
     const entries = await this.deps.userMovies.findAllForUser(user.id);
-    const liked = entries.filter((e) => e.favorite || (e.rating !== null && e.rating >= 4.5));
+    const liked = entries.filter(isLikedEntry);
 
     const genreCounts = new Map<string, number>();
     for (const entry of liked) {
@@ -59,23 +103,25 @@ export class FavoritesService {
       }
     }
 
-    const topFavorites = liked
-      .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
-      .slice(0, Math.min(MAX_FAVORITE_MOVIES, MAX_LIMIT));
-
-    const enrichedFavorites = await this.deps.enrichment.enrichEntries(topFavorites);
-
-    const summary: FavoritesSummary = {
-      favoriteMovies: enrichedFavorites.map(toMovieDto),
-      favoriteDirectors: topN(countBy(liked, (e) => e.movie.director), 10),
-      favoriteGenres: topN(genreCounts, 10),
-      favoriteYears: topN(
+    const facets: FavoriteFacetsCache = {
+      directors: sortNamedCounts(countBy(liked, (e) => e.movie.director)),
+      genres: sortNamedCounts(genreCounts),
+      years: sortNamedCounts(
         countBy(liked, (e) => (e.movie.year !== null ? String(e.movie.year) : null)),
-        10,
       ),
     };
 
-    await this.deps.cache.set(cacheKey, summary, this.deps.env.CACHE_TTL);
-    return summary;
+    await this.deps.cache.set(cacheKey, facets, this.deps.env.CACHE_TTL);
+    return facets;
   }
+}
+
+function isLikedEntry(entry: { favorite: boolean; rating: number | null }): boolean {
+  return entry.favorite || (entry.rating !== null && entry.rating >= FAVORITE_RATING_THRESHOLD);
+}
+
+function sortNamedCounts(map: Map<string, number>): NamedCount[] {
+  return [...map.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .map(([name, count]) => ({ name, count }));
 }

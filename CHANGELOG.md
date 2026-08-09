@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.1] - 2026-08-09
+
+### Changed
+
+- Bruno collection updated for favorites movie list + directors/genres/years facet requests
+- README / development docs mention the Bruno collection and default list `limit` 20
+
+## [2.0.0] - 2026-08-09
+
+### Breaking
+
+- `GET /favorites` now returns a paginated movie list (`items`, `page`, `limit`, `total`, `totalPages`) instead of a combined summary object
+- Default list `limit` is **20** (was 50); omitting `limit` still applies the default — unbounded pages are not supported
+
+### Added
+
+- `GET /favorites/directors`, `/favorites/genres`, `/favorites/years` — paginated `{ name, count }` facet lists from the liked set
+- Favorite movies support the same filters/sort/pagination as `/movies`
+
+### Changed
+
+- Favorite criteria unchanged: liked flag or rating ≥ 4.5
+
 ## [1.5.0] - 2026-08-09
 
 ### Added

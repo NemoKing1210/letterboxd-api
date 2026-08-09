@@ -114,17 +114,21 @@ bun run dev
 | `GET` | `/api/users/:username` | Profile |
 | `GET` | `/api/users/:username/movies` | Filtered movie list |
 | `GET` | `/api/users/:username/ratings` | Ratings summary |
-| `GET` | `/api/users/:username/favorites` | Favorites summary |
+| `GET` | `/api/users/:username/favorites` | Favorite movies (filtered, paginated) |
+| `GET` | `/api/users/:username/favorites/directors` | Favorite directors |
+| `GET` | `/api/users/:username/favorites/genres` | Favorite genres |
+| `GET` | `/api/users/:username/favorites/years` | Favorite years |
 | `GET` | `/api/users/:username/statistics` | Statistics |
 | `GET` | `/api/users/:username/recommendations` | Rule-based recommendations |
 | `POST` | `/api/users/:username/sync` | Force Letterboxd sync |
 
-User-scoped `GET` endpoints auto-sync from Letterboxd when the user is missing locally, or when the last successful sync is older than `USER_SYNC_TTL_SECONDS` (default 12h; set `0` to disable stale refresh). First sync / refresh may be slow. Sync imports the films list (year from titles, no placeholder posters) and diary watched dates. Genres, directors, and real posters are enriched on demand for movies returned by the API (tracked by internal `Movie.enriched`). Movie list `limit` max is 100. Movie responses include a Letterboxd `url`.
+User-scoped `GET` endpoints auto-sync from Letterboxd when the user is missing locally, or when the last successful sync is older than `USER_SYNC_TTL_SECONDS` (default 12h; set `0` to disable stale refresh). First sync / refresh may be slow. Sync imports the films list (year from titles, no placeholder posters) and diary watched dates. Genres, directors, and real posters are enriched on demand for movies returned by the API (tracked by internal `Movie.enriched`). List endpoints default `limit` to 20 (max 100); omitting `limit` still caps the page size. Movie responses include a Letterboxd `url`.
 
 Example:
 
 ```bash
 curl "http://localhost:3000/api/users/USERNAME/movies?ratingMin=4&sort=rating_desc&limit=20"
+curl "http://localhost:3000/api/users/USERNAME/favorites/directors?limit=10"
 curl -X POST http://localhost:3000/api/users/USERNAME/sync
 ```
 
@@ -152,6 +156,7 @@ bun run db:studio     # prisma studio
 - [Database](docs/database.md)
 - [Development](docs/development.md)
 - [Roadmap](docs/roadmap.md)
+- Bruno collection: open the [`bruno/`](bruno/) folder in [Bruno](https://www.usebruno.com/) (Local env → set `username`)
 
 ## Contributing
 

@@ -1,0 +1,30 @@
+meta {
+  name: List Favorite Directors
+  type: http
+  seq: 5
+}
+
+get {
+  url: {{baseUrl}}/api/users/{{username}}/favorites/directors?page=1&limit=20
+}
+
+params:query {
+  page: 1
+  limit: 20
+}
+
+docs {
+  Paginated favorite directors from the liked set (`{ name, count }`).
+
+  Sorted by count desc, then name asc. `limit` default 20, max 100.
+}
+
+tests {
+  test("status is 200", function() {
+    expect(res.getStatus()).to.equal(200);
+  });
+
+  test("items is an array", function() {
+    expect(res.body.items).to.be.an("array");
+  });
+}

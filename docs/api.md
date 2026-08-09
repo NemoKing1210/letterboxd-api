@@ -50,7 +50,7 @@ Wherever the API returns a film (list item or nested in summaries), it uses the 
 }
 ```
 
-Used by: `/movies` (`items`), `/ratings` (`bestMovies` / `worstMovies`), `/favorites` (`favoriteMovies`).
+Used by: `/movies` (`items`), `/ratings` (`bestMovies` / `worstMovies`), `/favorites` (`items`).
 
 ### Movies
 
@@ -66,9 +66,9 @@ Query params:
 | `genre` | Exact genre token (lowercase; filled by Letterboxd film-page enrichment) |
 | `director` | Case-insensitive contains |
 | `sort` | `rating_desc`, `rating_asc`, `date_desc`, `date_asc`, `year_desc`, `year_asc`, `title_asc` |
-| `page` / `limit` | Pagination (`limit` max **100**) |
+| `page` / `limit` | Pagination (`limit` default **20**, max **100**) |
 
-Paginated response: `{ items: Movie[], page, limit, total, totalPages }`.
+Paginated response: `{ items: Movie[], page, limit, total, totalPages }`. Omitting `limit` still applies the default of 20 — unbounded lists are not supported.
 
 ### Ratings
 
@@ -80,7 +80,18 @@ Returns average, count, best/worst films (full `Movie` objects), rating distribu
 
 `GET /api/users/:username/favorites`
 
-Favorite movies (liked or ≥ 4.5) as full `Movie` objects, plus directors, genres, years.
+Paginated favorite movies (liked flag or rating ≥ 4.5). Same query filters/sort/pagination as `/movies` (`limit` default **20**, max **100**).
+
+Response: `{ items: Movie[], page, limit, total, totalPages }`.
+
+Facet lists (same pagination; sorted by `count` desc, then `name` asc):
+
+| Path | Description |
+| --- | --- |
+| `GET /api/users/:username/favorites/directors` | `{ items: [{ name, count }], page, limit, total, totalPages }` |
+| `GET /api/users/:username/favorites/genres` | same shape |
+| `GET /api/users/:username/favorites/years` | same shape |
+
 ### Statistics
 
 `GET /api/users/:username/statistics`
