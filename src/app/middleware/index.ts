@@ -2,6 +2,8 @@ import type { Context, Next } from 'hono';
 import { RateLimitError } from '../../shared/errors/app-error';
 import type { AppContainer } from '../container';
 
+export { authMiddleware } from '../auth/auth-middleware';
+
 export function requestIdMiddleware() {
   return async (c: Context, next: Next) => {
     const existing = c.req.header('x-request-id');

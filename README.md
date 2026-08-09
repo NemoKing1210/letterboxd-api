@@ -107,6 +107,28 @@ bun run dev
 | `USER_SYNC_TTL_SECONDS` | Re-sync on user GET when last successful sync is older (default 43200 = 12h; `0` = only when user missing) |
 | `RATE_LIMIT_*` | Per-IP rate limiting |
 | `CORS_ORIGIN` | Allowed origins (`*` or CSV) |
+| `AUTH_ENABLED` | Enable API auth (`true`/`false`, default `false`) |
+| `AUTH_METHODS` | CSV: `api_key`, `bearer`, `basic` (default `api_key,bearer`) |
+| `AUTH_TOKENS` | CSV secrets for `api_key` / `bearer` (required when those methods are enabled) |
+| `AUTH_BASIC_USERNAME` / `AUTH_BASIC_PASSWORD` | HTTP Basic credentials (required when `basic` is enabled) |
+| `AUTH_PUBLIC_PATHS` | CSV exact paths that skip auth (default `/health`) |
+
+### Making the API private
+
+Set `AUTH_ENABLED=true` and provide secrets. Any enabled method may be used:
+
+```bash
+# API key
+curl -H "X-API-Key: YOUR_TOKEN" "http://localhost:3000/api/users/USERNAME/movies"
+
+# Bearer
+curl -H "Authorization: Bearer YOUR_TOKEN" "http://localhost:3000/api/users/USERNAME/movies"
+
+# Basic (when AUTH_METHODS includes basic)
+curl -u USER:PASS "http://localhost:3000/api/users/USERNAME/movies"
+```
+
+Do not pass tokens in query strings (they leak into logs and proxies).
 
 ## API overview
 

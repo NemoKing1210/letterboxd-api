@@ -3,11 +3,13 @@ import { swaggerUI } from '@hono/swagger-ui';
 import { cors } from 'hono/cors';
 import type { AppContainer } from './container';
 import {
+  authMiddleware,
   rateLimitMiddleware,
   requestIdMiddleware,
   requestLoggingMiddleware,
   securityHeadersMiddleware,
 } from './middleware';
+import type { AuthMethod } from './auth';
 import {
   favoritesFacetQuerySchema,
   namedCountSchema,
@@ -20,6 +22,7 @@ import { AppError, ValidationError } from '../shared/errors/app-error';
 
 type AppVariables = {
   requestId: string;
+  authMethod?: AuthMethod;
 };
 
 const ErrorSchema = z.object({
@@ -27,7 +30,6 @@ const ErrorSchema = z.object({
     code: z.string(),
     message: z.string(),
     details: z.unknown().optional(),
-    requestId: z.string().optional(),
   }),
 });
 
@@ -94,7 +96,6 @@ export function createApp(container: AppContainer) {
             code: appError.code,
             message: appError.message,
             details: appError.details ?? undefined,
-            requestId,
           },
         },
         appError.status as 400,
@@ -109,7 +110,6 @@ export function createApp(container: AppContainer) {
           error: {
             code: 'VALIDATION_ERROR',
             message: error.message,
-            requestId,
           },
         },
         (maybeStatus >= 400 && maybeStatus < 600 ? maybeStatus : 400) as 400,
@@ -122,7 +122,6 @@ export function createApp(container: AppContainer) {
         error: {
           code: 'INTERNAL_ERROR',
           message: 'Internal server error',
-          requestId,
         },
       },
       500,
@@ -139,6 +138,7 @@ export function createApp(container: AppContainer) {
       origin: container.env.CORS_ORIGIN === '*' ? '*' : container.env.CORS_ORIGIN.split(','),
     }),
   );
+  app.use('*', authMiddleware(container));
 
   app.get('/health', (c) =>
     c.json({
@@ -415,15 +415,51 @@ export function createApp(container: AppContainer) {
   });
 
   // Fallback for non-openapi health already registered
+  if (container.authenticator.enabled) {
+    const methods = new Set(container.authenticator.methods);
+    if (methods.has('api_key')) {
+      app.openAPIRegistry.registerComponent('securitySchemes', 'ApiKeyAuth', {
+        type: 'apiKey',
+        in: 'header',
+        name: 'X-API-Key',
+      });
+    }
+    if (methods.has('bearer')) {
+      app.openAPIRegistry.registerComponent('securitySchemes', 'HttpBearer', {
+        type: 'http',
+        scheme: 'bearer',
+      });
+    }
+    if (methods.has('basic')) {
+      app.openAPIRegistry.registerComponent('securitySchemes', 'HttpBasic', {
+        type: 'http',
+        scheme: 'basic',
+      });
+    }
+  }
+
   app.doc('/openapi.json', {
     openapi: '3.1.0',
     info: {
       title: 'Letterboxd API',
-      version: '2.2.0',
+      version: '3.0.0',
       description:
         'Analyze Letterboxd film taste: sync, filter, search, statistics, and AI-ready recommendations.',
     },
     servers: [{ url: '/' }],
+    ...(container.authenticator.enabled
+      ? {
+          security: container.authenticator.methods.map((method): Record<string, string[]> => {
+            if (method === 'api_key') {
+              return { ApiKeyAuth: [] };
+            }
+            if (method === 'bearer') {
+              return { HttpBearer: [] };
+            }
+            return { HttpBasic: [] };
+          }),
+        }
+      : {}),
   });
 
   app.get('/docs', swaggerUI({ url: '/openapi.json' }));

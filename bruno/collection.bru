@@ -4,6 +4,7 @@ meta {
 
 headers {
   accept: application/json
+  X-API-Key: {{apiKey}}
 }
 
 auth {
@@ -13,6 +14,8 @@ auth {
 vars:pre-request {
   baseUrl: http://localhost:3000
   username: nemoking
+  apiKey: 
+  bearerToken: 
 }
 
 docs {
@@ -26,6 +29,11 @@ docs {
   2. Select the **Local** environment
   3. Set `username` to a Letterboxd username
   4. Run **Sync User** once before reading derived endpoints (or hit Get Profile to lazy-sync)
+  
+  ## Auth (optional)
+  
+  When the server has `AUTH_ENABLED=true`, set collection var `apiKey` (sent as `X-API-Key`),
+  or switch auth mode to Bearer and use `bearerToken`.
   
   ## Favorites
   

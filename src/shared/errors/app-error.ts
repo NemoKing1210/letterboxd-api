@@ -54,3 +54,10 @@ export class RateLimitError extends AppError {
     this.name = 'RateLimitError';
   }
 }
+
+export class UnauthorizedError extends AppError {
+  constructor(message = 'Unauthorized') {
+    super({ message, code: 'UNAUTHORIZED', status: 401 });
+    this.name = 'UnauthorizedError';
+  }
+}

@@ -2,6 +2,22 @@
 
 Interactive docs: `GET /docs` (Swagger UI). Spec: `GET /openapi.json`.
 
+## Authentication
+
+By default the API is open (`AUTH_ENABLED=false`). When `AUTH_ENABLED=true`, every path except those listed in `AUTH_PUBLIC_PATHS` (default: `/health`) requires credentials.
+
+Configure methods with `AUTH_METHODS` (CSV). Any listed method may succeed:
+
+| Method | How to send |
+| --- | --- |
+| `api_key` | Header `X-API-Key: <token>` — tokens from `AUTH_TOKENS` |
+| `bearer` | Header `Authorization: Bearer <token>` — same `AUTH_TOKENS` |
+| `basic` | Header `Authorization: Basic …` — `AUTH_BASIC_USERNAME` / `AUTH_BASIC_PASSWORD` |
+
+Failed auth returns `401` with `{ "error": { "code": "UNAUTHORIZED", ... } }` and may include `WWW-Authenticate` for bearer/basic. Query-string API keys are not supported.
+
+When auth is enabled, OpenAPI advertises the active security schemes at `/openapi.json`.
+
 ## Endpoints
 
 ### Health
@@ -178,10 +194,11 @@ Rule-based stub implementing `RecommendationEngine` for future AI swap.
 {
   "error": {
     "code": "NOT_FOUND",
-    "message": "User \"x\" not found",
-    "requestId": "..."
+    "message": "User \"x\" not found"
   }
 }
 ```
+
+Correlation id is returned in the `X-Request-Id` response header (not in the JSON body).
 
 Common codes: `NOT_FOUND`, `VALIDATION_ERROR`, `RATE_LIMIT_EXCEEDED`, `EXTERNAL_SERVICE_ERROR`, `SYNC_FAILED`, `INTERNAL_ERROR`.

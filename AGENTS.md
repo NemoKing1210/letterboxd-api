@@ -49,7 +49,7 @@ infrastructure implements ports
 
 - New endpoints go through OpenAPI routes in `src/app/server.ts` (schemas, responses, tags).
 - Keep docs in sync: `docs/api.md` and Swagger (`/docs`).
-- Consistent error JSON: `{ error: { code, message, details?, requestId? } }`.
+- Consistent error JSON: `{ error: { code, message, details? } }`. Correlation via `X-Request-Id` header.
 
 ## Database
 

@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-08-09
+
+### Removed
+
+- `requestId` field from error JSON responses (use `X-Request-Id` response header for correlation)
+
+## [2.3.1] - 2026-08-09
+
+### Changed
+
+- `.env.example` regrouped with clearer section headers and inline descriptions
+
+## [2.3.0] - 2026-08-09
+
+### Added
+
+- Optional API authentication via env (`AUTH_ENABLED`, `AUTH_METHODS`, `AUTH_TOKENS`, Basic credentials, `AUTH_PUBLIC_PATHS`)
+- Supported methods: `api_key` (`X-API-Key`), `bearer` (`Authorization: Bearer`), `basic` (HTTP Basic); multiple methods can be enabled at once
+- OpenAPI security schemes registered when auth is enabled
+
 ## [2.2.0] - 2026-08-09
 
 ### Added

@@ -2,11 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../src/app/server';
 import type { AppContainer } from '../../src/app/container';
 import type { Env } from '../../src/app/config/env';
+import { createAuthenticator } from '../../src/app/auth';
 import type { AppLogger } from '../../src/infrastructure/logger';
 import { MemoryCache } from '../../src/infrastructure/cache';
 
-function createTestContainer(overrides: Partial<AppContainer> = {}): AppContainer {
-  const env: Env = {
+function createTestEnv(overrides: Partial<Env> = {}): Env {
+  return {
     DATABASE_URL: 'postgresql://postgres:postgres@localhost:5432/letterboxd?schema=public',
     DB_HOST: 'localhost',
     DB_PORT: 5432,
@@ -32,7 +33,18 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
     RATE_LIMIT_WINDOW_MS: 60_000,
     RATE_LIMIT_MAX: 1000,
     CORS_ORIGIN: '*',
+    AUTH_ENABLED: false,
+    AUTH_METHODS: ['api_key', 'bearer'],
+    AUTH_TOKENS: [],
+    AUTH_BASIC_USERNAME: '',
+    AUTH_BASIC_PASSWORD: '',
+    AUTH_PUBLIC_PATHS: ['/health'],
+    ...overrides,
   };
+}
+
+function createTestContainer(overrides: Partial<AppContainer> = {}): AppContainer {
+  const env = overrides.env ?? createTestEnv();
 
   const logger = {
     info: vi.fn(),
@@ -44,11 +56,12 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
     child: vi.fn(),
   } as unknown as AppLogger;
 
-  return {
+  const base: AppContainer = {
     env,
     logger,
     prisma: {} as AppContainer['prisma'],
     cache: new MemoryCache(),
+    authenticator: createAuthenticator(env),
     movieProvider: {} as AppContainer['movieProvider'],
     syncService: {
       syncLetterboxdUser: vi.fn(async () => ({
@@ -129,7 +142,13 @@ function createTestContainer(overrides: Partial<AppContainer> = {}): AppContaine
     recommendationService: {
       recommend: vi.fn(async () => []),
     } as unknown as AppContainer['recommendationService'],
+  };
+
+  return {
+    ...base,
     ...overrides,
+    env: overrides.env ?? base.env,
+    authenticator: overrides.authenticator ?? createAuthenticator(overrides.env ?? base.env),
   };
 }
 
@@ -205,5 +224,54 @@ describe('API integration', () => {
         limit: 10,
       }),
     );
+  });
+
+  describe('authentication', () => {
+    function authContainer() {
+      return createTestContainer({
+        env: createTestEnv({
+          AUTH_ENABLED: true,
+          AUTH_METHODS: ['api_key', 'bearer'],
+          AUTH_TOKENS: ['test-secret'],
+          AUTH_PUBLIC_PATHS: ['/health'],
+        }),
+      });
+    }
+
+    it('allows API when auth is disabled', async () => {
+      const app = createApp(createTestContainer());
+      const res = await app.request('/api/users/demo');
+      expect(res.status).toBe(200);
+    });
+
+    it('rejects protected routes without credentials', async () => {
+      const app = createApp(authContainer());
+      const res = await app.request('/api/users/demo');
+      expect(res.status).toBe(401);
+      const body = (await res.json()) as { error: { code: string } };
+      expect(body.error.code).toBe('UNAUTHORIZED');
+    });
+
+    it('accepts X-API-Key', async () => {
+      const app = createApp(authContainer());
+      const res = await app.request('/api/users/demo', {
+        headers: { 'X-API-Key': 'test-secret' },
+      });
+      expect(res.status).toBe(200);
+    });
+
+    it('accepts Bearer token', async () => {
+      const app = createApp(authContainer());
+      const res = await app.request('/api/users/demo', {
+        headers: { Authorization: 'Bearer test-secret' },
+      });
+      expect(res.status).toBe(200);
+    });
+
+    it('keeps /health public by default', async () => {
+      const app = createApp(authContainer());
+      const res = await app.request('/health');
+      expect(res.status).toBe(200);
+    });
   });
 });

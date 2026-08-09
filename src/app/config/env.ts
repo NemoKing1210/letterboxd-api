@@ -1,6 +1,9 @@
 import { z } from 'zod';
 import { buildDatabaseUrl } from './database-url';
 
+export const AUTH_METHODS = ['api_key', 'bearer', 'basic'] as const;
+export type AuthMethodName = (typeof AUTH_METHODS)[number];
+
 const optionalProxyUrl = z
   .string()
   .optional()
@@ -25,6 +28,25 @@ const optionalProxyUrl = z
       });
     }
   });
+
+const booleanish = z
+  .union([z.boolean(), z.string()])
+  .optional()
+  .default(false)
+  .transform((value) => {
+    if (typeof value === 'boolean') {
+      return value;
+    }
+    const normalized = value.trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes';
+  });
+
+function parseCsv(value: string): string[] {
+  return value
+    .split(',')
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+}
 
 const envSchema = z
   .object({
@@ -54,6 +76,12 @@ const envSchema = z
     RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(60_000),
     RATE_LIMIT_MAX: z.coerce.number().int().positive().default(100),
     CORS_ORIGIN: z.string().default('*'),
+    AUTH_ENABLED: booleanish,
+    AUTH_METHODS: z.string().optional().default('api_key,bearer'),
+    AUTH_TOKENS: z.string().optional().default(''),
+    AUTH_BASIC_USERNAME: z.string().optional().default(''),
+    AUTH_BASIC_PASSWORD: z.string().optional().default(''),
+    AUTH_PUBLIC_PATHS: z.string().optional().default('/health'),
   })
   .superRefine((data, ctx) => {
     const hasUrl = Boolean(data.DATABASE_URL?.trim());
@@ -64,6 +92,65 @@ const envSchema = z
         message: 'Provide DATABASE_URL or DB_HOST + DB_USER + DB_NAME',
         path: ['DATABASE_URL'],
       });
+    }
+
+    const methods = parseCsv(data.AUTH_METHODS);
+    const allowed = new Set<string>(AUTH_METHODS);
+    const invalid = methods.filter((method) => !allowed.has(method));
+    if (invalid.length > 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `Invalid AUTH_METHODS: ${invalid.join(', ')}. Allowed: ${AUTH_METHODS.join(', ')}`,
+        path: ['AUTH_METHODS'],
+      });
+    }
+
+    if (!data.AUTH_ENABLED) {
+      return;
+    }
+
+    if (methods.length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'AUTH_METHODS must list at least one method when AUTH_ENABLED=true',
+        path: ['AUTH_METHODS'],
+      });
+    }
+
+    const usesToken = methods.includes('api_key') || methods.includes('bearer');
+    if (usesToken && parseCsv(data.AUTH_TOKENS).length === 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'AUTH_TOKENS must include at least one token when api_key or bearer is enabled',
+        path: ['AUTH_TOKENS'],
+      });
+    }
+
+    if (methods.includes('basic')) {
+      if (!data.AUTH_BASIC_USERNAME.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'AUTH_BASIC_USERNAME is required when basic auth is enabled',
+          path: ['AUTH_BASIC_USERNAME'],
+        });
+      }
+      if (!data.AUTH_BASIC_PASSWORD.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'AUTH_BASIC_PASSWORD is required when basic auth is enabled',
+          path: ['AUTH_BASIC_PASSWORD'],
+        });
+      }
+    }
+
+    for (const path of parseCsv(data.AUTH_PUBLIC_PATHS)) {
+      if (!path.startsWith('/')) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: `AUTH_PUBLIC_PATHS entries must start with / (got "${path}")`,
+          path: ['AUTH_PUBLIC_PATHS'],
+        });
+      }
     }
   })
   .transform((data) => {
@@ -77,12 +164,21 @@ const envSchema = z
       DB_SCHEMA: data.DB_SCHEMA,
     });
 
+    const authMethods = parseCsv(data.AUTH_METHODS).filter((method): method is AuthMethodName =>
+      (AUTH_METHODS as readonly string[]).includes(method),
+    );
+
     return {
       ...data,
       DATABASE_URL,
       HTTP_PROXY: data.HTTP_PROXY.trim(),
       HTTPS_PROXY: data.HTTPS_PROXY.trim(),
       NO_PROXY: data.NO_PROXY.trim(),
+      AUTH_METHODS: authMethods,
+      AUTH_TOKENS: parseCsv(data.AUTH_TOKENS),
+      AUTH_BASIC_USERNAME: data.AUTH_BASIC_USERNAME.trim(),
+      AUTH_BASIC_PASSWORD: data.AUTH_BASIC_PASSWORD.trim(),
+      AUTH_PUBLIC_PATHS: parseCsv(data.AUTH_PUBLIC_PATHS),
     };
   });
 

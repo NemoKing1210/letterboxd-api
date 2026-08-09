@@ -1,4 +1,5 @@
 import { loadEnv, type Env } from './config/env';
+import { createAuthenticator, type AuthAuthenticator } from './auth';
 import { MemoryCache, type CacheProvider } from '../infrastructure/cache';
 import {
   createPrismaClient,
@@ -29,6 +30,7 @@ export type AppContainer = {
   logger: AppLogger;
   prisma: PrismaClient;
   cache: CacheProvider;
+  authenticator: AuthAuthenticator;
   movieProvider: MovieProvider;
   syncService: SynchronizationService;
   usersService: UsersService;
@@ -47,6 +49,14 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
   const logger = overrides?.logger ?? createLogger(env);
   const prisma = overrides?.prisma ?? createPrismaClient();
   const cache = overrides?.cache ?? new MemoryCache();
+  const authenticator = overrides?.authenticator ?? createAuthenticator(env);
+
+  if (authenticator.enabled) {
+    logger.info(
+      { methods: authenticator.methods, publicPaths: [...authenticator.publicPaths] },
+      'API authentication enabled',
+    );
+  }
 
   const users = new PrismaUserRepository(prisma);
   const movies = new PrismaMovieRepository(prisma);
@@ -187,6 +197,7 @@ export function createContainer(overrides?: Partial<AppContainer>): AppContainer
     logger,
     prisma,
     cache,
+    authenticator,
     movieProvider,
     syncService,
     usersService,
